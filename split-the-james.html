@@ -164,6 +164,24 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
 .mini:active { transform: scale(.97); }
 .ghost { width: 100%; border: 1.5px solid var(--line); border-radius: 16px; padding: 13px; background: var(--surface); font: 700 15px var(--f-body); }
 .ghost:active { transform: scale(.98); }
+.tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { flex: none; border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 16px; font: 700 14px var(--f-body); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: transform .15s, background .2s; }
+.tab:active { transform: scale(.95); }
+.tab[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.tab.new { border-style: dashed; color: var(--accent); background: transparent; }
+.billname { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.billname label { color: var(--muted); font-size: 13px; flex: none; }
+.textin { flex: 1; min-width: 0; width: 100%; font: 500 16px var(--f-body); background: var(--surface); color: var(--ink); border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; outline: none; }
+.textin:focus, .qtybox input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.addrow2 { display: flex; gap: 10px; align-items: center; }
+.addrow2 .money { width: auto; flex: 1; }
+.qtybox { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+.qtybox input { width: 64px; text-align: center; font: 500 18px var(--f-mono); background: var(--surface); color: var(--ink); border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 4px; outline: none; }
+.dright { display: flex; align-items: center; gap: 10px; flex: none; }
+.del { flex: none; width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--surface-2); color: var(--muted); font: 700 18px/1 var(--f-body); display: grid; place-items: center; align-self: center; }
+.del:active { transform: scale(.88); }
+.empty { text-align: center; color: var(--muted); padding: 22px 16px; }
 .copybox { margin: 0; white-space: pre-wrap; font: 400 13px var(--f-mono); background: var(--surface-2); border-radius: 12px; padding: 12px; margin-top: 10px; max-height: 360px; overflow: auto; }
 
 /* pinned live totals */
@@ -182,10 +200,11 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
 
 <div id="app">
   <header class="top">
-    <div><h1>Split the Check</h1><p>The James · Babylon · Check #140 · 9/25</p></div>
+    <div><h1>Split the Check</h1><p id="meta"></p></div>
     <div class="rightcol"><button class="resetbtn" id="reset">Reset</button><div class="billpill"><small>Bill total</small><b id="billtotal">$0.00</b></div></div>
   </header>
 
+  <section class="blk" id="sBills" style="margin-top:18px"></section>
   <section class="blk" id="sPeople"></section>
   <section class="blk" id="sDishes"></section>
   <section class="blk" id="sTip"></section>
@@ -201,34 +220,71 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
 (function () {
   "use strict";
   var HUES = [224, 350, 160, 32, 272, 328, 190, 88, 14, 245, 130, 305];
-  // Receipt lines, prices in cents
-  var items = [
-    ["Creamed Spinach", 1, 1500], ["Tomahawk", 1, 18500], ["Tanqueray", 1, 1700], ["Caviar Bump", 4, 11200],
-    ["Tableside Martini", 2, 6600], ["Caesar", 1, 1900], ["Add Chicken", 1, 1200], ["Burger", 1, 2900],
-    ["Weekly Pasta (special)", 1, 3600], ["Michelob Ultra Light", 1, 900], ["Save the Robots IPA", 1, 1000], ["Sticky Toffee Cake", 1, 1500]
-  ].map(function (r, i) { return { id: i, name: r[0], qty: r[1], price: r[2], shares: {}, open: false }; });
-
-  var KEY = "split-the-check-the-james-v1";
-  function fresh() { return { n: 4, names: ["", "", "", ""], taxCents: 4594, taxFollows: true, tipFollows: true, tipMode: "amt", tipPct: 20, tipAmtCents: 12000, shareWho: "all" }; }
-  var S = fresh();
-  function save() { try { localStorage.setItem(KEY, JSON.stringify({ v: 1, S: S, items: items.map(function (i) { return { shares: i.shares, open: i.open }; }) })); } catch (e) {} }
-  function load() { // restore the last session on this device, ignoring anything malformed
+  // Receipt lines for the James bill, prices in cents
+  function jamesItems() {
+    return [
+      ["Creamed Spinach", 1, 1500], ["Tomahawk", 1, 18500], ["Tanqueray", 1, 1700], ["Caviar Bump", 4, 11200],
+      ["Tableside Martini", 2, 6600], ["Caesar", 1, 1900], ["Add Chicken", 1, 1200], ["Burger", 1, 2900],
+      ["Weekly Pasta (special)", 1, 3600], ["Michelob Ultra Light", 1, 900], ["Save the Robots IPA", 1, 1000], ["Sticky Toffee Cake", 1, 1500]
+    ].map(function (r, i) { return { id: i, name: r[0], qty: r[1], price: r[2], shares: {}, open: false }; });
+  }
+  var KEY = "split-the-check-v2", OLDKEY = "split-the-check-the-james-v1";
+  function freshS(kind) {
+    var f = { n: 4, names: ["", "", "", ""], taxCents: 0, taxFollows: true, tipFollows: true, tipMode: "pct", tipPct: 20, tipAmtCents: 0, shareWho: "all" };
+    if (kind === "james") { f.taxCents = 4594; f.tipMode = "amt"; f.tipAmtCents = 12000; }
+    return f;
+  }
+  function newBill(kind, title, id) { return { id: id, kind: kind, title: title, S: freshS(kind), items: kind === "james" ? jamesItems() : [], next: kind === "james" ? 12 : 0 }; }
+  var bills = [newBill("james", "The James", 1)], cur = 0, nextBillId = 2;
+  var S = bills[0].S, items = bills[0].items;
+  function bind() { S = bills[cur].S; items = bills[cur].items; shown = {}; }
+  function save() {
     try {
-      var d = JSON.parse(localStorage.getItem(KEY) || "null"); if (!d || d.v !== 1 || !d.S) return;
-      var f = fresh(); Object.keys(f).forEach(function (k) { if (d.S[k] !== undefined && typeof d.S[k] === typeof f[k]) f[k] = d.S[k]; });
-      if (!Array.isArray(d.S.names)) d.S.names = f.names;
-      f.names = d.S.names.map(String); f.n = Math.max(1, Math.min(12, Math.round(f.n)));
-      while (f.names.length < f.n) f.names.push("");
-      if (f.tipMode !== "pct" && f.tipMode !== "amt") f.tipMode = "amt";
-      if (f.shareWho !== "all" && !(typeof f.shareWho === "number" && f.shareWho < f.n)) f.shareWho = "all";
-      S = f;
-      (d.items || []).forEach(function (x, i) {
-        var it = items[i]; if (!it || !x) return; var o = {}, sum = 0;
-        Object.keys(x.shares || {}).forEach(function (k) { var v = +x.shares[k]; if (+k < S.n && v >= 0 && v <= 100) { o[+k] = Math.round(v); sum += o[+k]; } });
-        if (sum === 100) it.shares = o; it.open = !!x.open && sum === 100;
-      });
+      localStorage.setItem(KEY, JSON.stringify({ v: 2, cur: cur, nextBillId: nextBillId, bills: bills.map(function (b) {
+        return { id: b.id, kind: b.kind, title: b.title, next: b.next, S: b.S, items: b.items.map(function (i) { return { id: i.id, name: i.name, qty: i.qty, price: i.price, shares: i.shares, open: i.open }; }) };
+      }) }));
     } catch (e) {}
   }
+  function cleanS(raw, kind) {
+    var f = freshS(kind); raw = raw || {};
+    Object.keys(f).forEach(function (k) { if (raw[k] !== undefined && typeof raw[k] === typeof f[k]) f[k] = raw[k]; });
+    f.names = (Array.isArray(raw.names) ? raw.names : f.names).map(String).map(function (x) { return x.slice(0, 14); });
+    f.n = Math.max(1, Math.min(12, Math.round(f.n))); while (f.names.length < f.n) f.names.push("");
+    if (f.tipMode !== "pct" && f.tipMode !== "amt") f.tipMode = "pct";
+    f.taxCents = Math.max(0, Math.round(f.taxCents) || 0); f.tipAmtCents = Math.max(0, Math.round(f.tipAmtCents) || 0); f.tipPct = Math.max(0, Math.min(100, f.tipPct));
+    f.shareWho = typeof raw.shareWho === "number" && raw.shareWho >= 0 && raw.shareWho < f.n ? Math.round(raw.shareWho) : "all";
+    return f;
+  }
+  function cleanShares(x, n) {
+    var o = {}, sum = 0;
+    Object.keys((x && x.shares) || {}).forEach(function (k) { var v = +x.shares[k]; if (+k >= 0 && +k < n && v >= 0 && v <= 100) { o[+k] = Math.round(v); sum += o[+k]; } });
+    return sum === 100 ? o : {};
+  }
+  function load() { // restore the last session on this device, ignoring anything malformed
+    try {
+      var d = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (d && d.v === 2 && Array.isArray(d.bills) && d.bills.length) {
+        var out = d.bills.slice(0, 8).map(function (b, bi) {
+          var kind = b.kind === "james" ? "james" : "manual", st = cleanS(b.S, kind), seen = {}, max = -1;
+          var its = (Array.isArray(b.items) ? b.items : []).filter(function (x) { return x && typeof x.name === "string"; }).slice(0, 100).map(function (x, i) {
+            var id = Math.round(+x.id); if (!isFinite(id) || id < 0 || seen[id]) id = 1000 + i; seen[id] = 1; if (id > max) max = id;
+            var sh = cleanShares(x, st.n);
+            return { id: id, name: x.name.slice(0, 40), qty: Math.max(1, Math.min(99, Math.round(+x.qty) || 1)), price: Math.max(0, Math.round(+x.price) || 0), shares: sh, open: !!x.open && Object.keys(sh).length > 1 };
+          });
+          return { id: Math.round(+b.id) || bi + 1, kind: kind, title: String(b.title || "").slice(0, 28), S: st, items: its, next: max + 1 };
+        });
+        bills = out; cur = Math.max(0, Math.min(out.length - 1, Math.round(+d.cur) || 0)); nextBillId = Math.max(+d.nextBillId || 0, out.length + 1);
+      } else { // migrate the earlier single-bill save
+        var o = JSON.parse(localStorage.getItem(OLDKEY) || "null"); if (!o || o.v !== 1 || !o.S) return;
+        var jb = newBill("james", "The James", 1); jb.S = cleanS(o.S, "james");
+        (o.items || []).forEach(function (x, i) { var it = jb.items[i]; if (!it) return; it.shares = cleanShares(x, jb.S.n); it.open = !!x && !!x.open && Object.keys(it.shares).length > 1; });
+        bills = [jb]; cur = 0;
+      }
+    } catch (e) {}
+    bind();
+  }
+  function byId(id) { for (var i = 0; i < items.length; i++) if (items[i].id === id) return items[i]; return null; }
+  function billHead(long) { var b = bills[cur]; return b.kind === "james" && b.title === "The James" ? (long ? "The James · Babylon · Check #140 · 9/25" : "The James · Check #140 · 9/25") : (b.title || "Bill"); }
   var shown = {};
   var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -264,8 +320,8 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       assigned += it.price * tot / 100;
     });
     var unassigned = sub - assigned;
-    var taxR = food.map(function (f) { return S.taxFollows ? tax * f / sub : tax / n; });
-    var tipR = food.map(function (f) { return S.tipFollows ? tip * f / sub : tip / n; });
+    var taxR = food.map(function (f) { return S.taxFollows && sub ? tax * f / sub : tax / n; });
+    var tipR = food.map(function (f) { return S.tipFollows && sub ? tip * f / sub : tip / n; });
     var raw = food.map(function (f, k) { return f + taxR[k] + tipR[k]; });
     var totals = unassigned < 0.5 ? lr(sub + tax + tip, raw) : raw.map(Math.round); // exact to the cent once everything is assigned
     var taxO = taxR.map(Math.round), tipO = tipR.map(Math.round);
@@ -288,7 +344,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     var boxes = "";
     for (var i = 0; i < S.n; i++) boxes += '<label class="namebox">' + av(i) + '<input data-i="' + i + '" value="' + esc(S.names[i]) + '" maxlength="14" placeholder="' + dflt(i) + '" aria-label="Name for person ' + (i + 1) + '"></label>';
     $("#sPeople").innerHTML = '<div class="sh"><h2>Who\'s splitting?</h2></div><div class="card"><div class="pp"><div class="stepper"><button class="round" id="minus" aria-label="Fewer people"' + (S.n <= 1 ? " disabled" : "") +
-      '>−</button><div class="num" id="count">' + S.n + '</div><button class="round" id="plus" aria-label="More people"' + (S.n >= 12 ? " disabled" : "") + '>+</button></div><div class="ppl">people<br>(receipt says 4 guests)</div></div><div class="names">' + boxes + "</div></div>";
+      '>−</button><div class="num" id="count">' + S.n + '</div><button class="round" id="plus" aria-label="More people"' + (S.n >= 12 ? " disabled" : "") + '>+</button></div><div class="ppl">people' + (bills[cur].kind === "james" ? "<br>(receipt says 4 guests)" : "") + '</div></div><div class="names">' + boxes + "</div></div>";
   }
   function setCount(n) {
     n = Math.max(1, Math.min(12, n)); if (n === S.n) return;
@@ -308,7 +364,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     for (var p = 0; p < S.n; p++) chips += '<button class="chip" data-p="' + p + '" style="--h:' + hue(p) + '" aria-pressed="false">' + av(p) + '<span class="t">' + esc(nm(p)) + "</span></button>";
     if (S.n > 1) chips += '<button class="chip all" data-all="1" aria-pressed="false">Everyone</button>';
     return '<article class="card dish" id="dish' + it.id + '" data-id="' + it.id + '"><div class="dhead"><div class="dname">' + esc(it.name) + (it.qty > 1 ? '<span class="qty">×' + it.qty + "</span>" : "") +
-      '</div><div class="dprice">' + money(it.price) + '</div></div><div class="chips">' + chips + '</div><div class="split"></div></article>';
+      '</div><div class="dright"><div class="dprice">' + money(it.price) + '</div><button class="del" data-del="1" aria-label="Remove ' + esc(it.name) + '">×</button></div></div><div class="chips">' + chips + '</div><div class="split"></div></article>';
   }
   function splitHTML(it) {
     var ids = sharesOf(it).sort(function (a, b) { return a - b; });
@@ -332,8 +388,28 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   function renderDishes() {
     $("#sDishes").innerHTML = '<div class="sh"><h2>Who had what?</h2><span class="hint">Tap names. Shared dishes split evenly.</span></div>' +
       '<div class="progress"><div class="row"><b id="pcount"></b><span id="pleft"></span></div><div class="track"><div class="fill" id="pfill"></div></div></div>' +
-      '<div class="stack">' + items.map(dishHTML).join("") + "</div>";
+      '<div class="stack" id="dishList"></div>' +
+      '<div class="card stack" id="addCard" style="margin-top:12px"><p class="sec" style="margin:0">Add an item</p>' +
+      '<input class="textin" id="addName" placeholder="Item name (optional)" maxlength="40" autocomplete="off" enterkeyhint="next">' +
+      '<div class="addrow2"><div class="money"><span>$</span><input id="addPrice" inputmode="decimal" placeholder="Price" enterkeyhint="done"></div><div class="qtybox"><label for="addQty">Qty</label><input id="addQty" inputmode="numeric" value="1"></div></div>' +
+      '<button class="primary" id="addBtn">Add item</button><p class="hint" id="addMsg" style="margin:0">Price is the total for the whole quantity.</p></div>';
+    renderDishList();
+  }
+  function renderDishList() {
+    var el = $("#dishList"); if (!el) return;
+    el.innerHTML = items.length ? items.map(dishHTML).join("") : '<div class="card empty">No items yet. Add the first one below.</div>';
     items.forEach(paintDish);
+  }
+  function addItem() {
+    var msg = $("#addMsg"), price = parseMoney($("#addPrice").value), qty = Math.max(1, Math.min(99, parseInt($("#addQty").value, 10) || 1));
+    if (price <= 0) { msg.style.color = "var(--warn)"; msg.textContent = "Enter a price above $0.00."; $("#addPrice").focus(); return; }
+    var b = bills[cur], name = $("#addName").value.trim() || "Item " + (items.length + 1);
+    items.push({ id: b.next++, name: name.slice(0, 40), qty: qty, price: price, shares: {}, open: false });
+    $("#addName").value = ""; $("#addPrice").value = ""; $("#addQty").value = "1";
+    msg.style.color = "var(--ok)"; msg.textContent = "Added " + name + ". Tap names above to assign it.";
+    renderDishList(); paintAll();
+    var nm_ = $("#addName"); if (nm_) nm_.focus({ preventScroll: true });
+    $("#addCard").scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
   }
   function setShare(it, p, v) {
     var ids = sharesOf(it).filter(function (x) { return x !== p; }); v = Math.max(0, Math.min(100, Math.round(v)));
@@ -355,7 +431,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   /* ---- tip & tax ---- */
   function renderTip() {
     var pre = [0, 15, 18, 20, 25].map(function (v) { return '<button data-pct="' + v + '" aria-pressed="' + (S.tipMode === "pct" && S.tipPct === v) + '">' + (v ? v + "%" : "None") + "</button>"; }).join("");
-    $("#sTip").innerHTML = '<div class="sh"><h2>Tip and tax</h2><span class="hint">No tip on the receipt</span></div>' +
+    $("#sTip").innerHTML = '<div class="sh"><h2>Tip and tax</h2><span class="hint">' + (bills[cur].kind === "james" ? "No tip on the receipt" : "Optional") + '</span></div>' +
       '<div class="card stack"><div class="tiprow"><div><div class="hint" style="margin-bottom:4px">Tip</div><div class="big" id="tipbig"></div></div><div class="tipnote" id="tipnote"></div></div>' +
       '<div class="presets" id="presets">' + pre + '</div>' +
       '<div class="field"><label for="tipamt">Or enter an exact tip</label><div class="money"><span>$</span><input id="tipamt" inputmode="decimal" placeholder="0.00" value="' + (S.tipMode === "amt" ? (S.tipAmtCents / 100).toFixed(2) : "") + '"></div></div><hr>' +
@@ -366,10 +442,10 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   function paintTip() {
     var c = compute();
     $("#tipbig").textContent = money(c.tip);
-    $("#tipnote").textContent = S.tipMode === "amt" ? "That's " + (c.tip / c.sub * 100).toFixed(1) + "% of the " + money(c.sub) + " pre-tax subtotal" : "% is figured on the " + money(c.sub) + " pre-tax subtotal";
+    $("#tipnote").textContent = S.tipMode === "amt" ? (c.sub ? "That's " + (c.tip / c.sub * 100).toFixed(1) + "% of the " + money(c.sub) + " pre-tax subtotal" : "") : "% is figured on the " + money(c.sub) + " pre-tax subtotal";
     $("#swTaxS").textContent = S.taxFollows ? "Bigger plates pay more tax. Turn off to split evenly." : "Tax is split evenly between everyone.";
     $("#swTipS").textContent = S.tipFollows ? "Bigger plates pay more tip. Turn off to split evenly." : "Tip is split evenly between everyone.";
-    $("#taxrate").textContent = "(" + (S.taxCents / c.sub * 100).toFixed(2).replace(/\.?0+$/, "") + "%)";
+    $("#taxrate").textContent = c.sub ? "(" + (S.taxCents / c.sub * 100).toFixed(2).replace(/\.?0+$/, "") + "%)" : "";
   }
 
   /* ---- totals ---- */
@@ -393,7 +469,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     l.push("  Tip " + money(c.tipO[i]) + (S.tipFollows ? " (in proportion to food)" : " (split evenly)"));
     return l;
   }
-  function header(c) { return ["The James · Check #140 · 9/25", "Bill " + money(c.grand) + " = food " + money(c.sub) + " + tax " + money(c.tax) + " + tip " + money(c.tip), ""]; }
+  function header(c) { return [billHead(false), "Bill " + money(c.grand) + " = food " + money(c.sub) + " + tax " + money(c.tax) + " + tip " + money(c.tip), ""]; }
   function summaryText(c) {
     var l = header(c);
     c.totals.forEach(function (v, i) { l = l.concat(personLines(c, i), [""]); });
@@ -407,6 +483,15 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   }
   function selectPreview() { var el = $("#preview"); if (!el) return; var r = document.createRange(); r.selectNodeContents(el); var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
 
+
+  /* ---- bills ---- */
+  function renderBills() {
+    var tabs = bills.map(function (b, i) { return '<button class="tab" data-bill="' + i + '" aria-pressed="' + (i === cur) + '">' + esc(b.title || "Bill") + "</button>"; }).join("");
+    $("#sBills").innerHTML = '<div class="tabs" id="tabs">' + tabs + (bills.length < 8 ? '<button class="tab new" id="newBill">+ New bill</button>' : "") + "</div>" +
+      '<div class="billname"><label for="billTitle">Bill name</label><input class="textin" id="billTitle" value="' + esc(bills[cur].title) + '" maxlength="28" placeholder="Name this bill"><button class="linkbtn" id="delBill"' + (bills.length < 2 ? " hidden" : "") + ">Delete bill</button></div>";
+  }
+  function renderAll() { renderBills(); renderPeople(); renderDishes(); renderTip(); renderTotals(); paintAll(); }
+  function goBill(i) { cur = i; bind(); renderAll(); window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" }); }
 
   /* ---- picture export (drawn on a canvas, light theme so it reads anywhere) ---- */
   var shareTimer = null, lastCanvas = null;
@@ -444,7 +529,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     g.fillStyle = "#f4f6fc"; g.fillRect(0, 0, W, H);
     // header band
     g.fillStyle = ACC; rr(0, 0, W, HEAD, 0); g.fill();
-    text("THE JAMES · CHECK #140 · 9/25", P, 78, "700 28px " + SANS, "rgba(255,255,255,.8)");
+    text(fit(billHead(false).toUpperCase(), "700 28px " + SANS, IW), P, 78, "700 28px " + SANS, "rgba(255,255,255,.8)");
     var title = who === "all" ? "Check split" : fit(nm(who) + " owes", "800 60px " + SANS, IW);
     text(title, P, 160, "800 60px " + SANS, "#fff");
     text(money(who === "all" ? c.grand : c.totals[who]), P, 270, "500 108px " + MONO, "#fff");
@@ -499,9 +584,10 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   function paintAll() {
     var c = compute();
     $("#billtotal").textContent = money(c.grand);
-    $("#pfill").style.width = (c.doneCount / items.length * 100) + "%";
-    $("#pcount").textContent = c.doneCount + " of " + items.length + " dishes assigned";
-    $("#pleft").textContent = c.unassigned >= 0.5 ? money(c.unassigned) + " left to assign" : "All assigned";
+    $("#meta").textContent = billHead(true);
+    $("#pfill").style.width = (items.length ? c.doneCount / items.length * 100 : 0) + "%";
+    $("#pcount").textContent = items.length ? c.doneCount + " of " + items.length + " dishes assigned" : "No items yet";
+    $("#pleft").textContent = !items.length ? "" : c.unassigned >= 0.5 ? money(c.unassigned) + " left to assign" : "All assigned";
     if ($("#tipbig")) paintTip();
     c.totals.forEach(function (v, i) {
       tween($('[data-own="' + i + '"]'), "own" + i, v);
@@ -515,26 +601,34 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     $("#pills").innerHTML = c.totals.map(function (v, i) { return '<div class="pill">' + av(i) + '<span><span class="nm">' + esc(nm(i)) + "</span><b>" + money(v) + "</b></span></div>"; }).join("");
     var pv = $("#preview"); if (pv) pv.textContent = summaryText(c);
     save(); scheduleShare();
-    var l = $("#dleft"); l.textContent = c.unassigned >= 0.5 ? money(c.unassigned) + " unassigned" : "All assigned ✓"; l.className = "left" + (c.unassigned >= 0.5 ? "" : " ok");
+    var l = $("#dleft"); l.textContent = !items.length ? "Add items to start" : c.unassigned >= 0.5 ? money(c.unassigned) + " unassigned" : "All assigned ✓"; l.className = "left" + (!items.length || c.unassigned >= 0.5 ? "" : " ok");
   }
 
   /* ---- events ---- */
   document.addEventListener("click", function (e) {
     var t = e.target.closest("button"); if (!t) return;
-    if (t.id === "reset") {
-      if (!t.classList.contains("arm")) { t.classList.add("arm"); t.textContent = "Tap again to clear"; clearTimeout(t._tm); t._tm = setTimeout(function () { t.classList.remove("arm"); t.textContent = "Reset"; }, 3200); return; }
-      clearTimeout(t._tm); t.classList.remove("arm"); t.textContent = "Reset";
-      S = fresh(); shown = {}; items.forEach(function (it) { it.shares = {}; it.open = false; });
-      try { localStorage.removeItem(KEY); } catch (err) {}
-      renderPeople(); renderDishes(); renderTip(); renderTotals(); paintAll(); window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" }); return;
+    if (t.id === "reset" || t.id === "delBill") {
+      var isDel = t.id === "delBill", label = isDel ? "Delete bill" : "Reset";
+      if (!t.classList.contains("arm")) { t.classList.add("arm"); t.textContent = isDel ? "Tap again to delete" : "Tap again to clear"; clearTimeout(t._tm); t._tm = setTimeout(function () { t.classList.remove("arm"); t.textContent = label; }, 3200); return; }
+      clearTimeout(t._tm); t.classList.remove("arm"); t.textContent = label;
+      if (isDel) { bills.splice(cur, 1); cur = Math.max(0, Math.min(cur, bills.length - 1)); }
+      else { var ob = bills[cur]; bills[cur] = newBill(ob.kind, ob.title, ob.id); }
+      bind(); renderAll(); window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" }); return;
     }
+    if (t.dataset.bill != null) return goBill(+t.dataset.bill);
+    if (t.id === "newBill") {
+      var nb = newBill("manual", "Bill " + (bills.length + 1), nextBillId++); nb.S.n = S.n; nb.S.names = S.names.slice();
+      bills.push(nb); return goBill(bills.length - 1);
+    }
+    if (t.id === "addBtn") return addItem();
     if (t.dataset.sw != null) { S.shareWho = t.dataset.sw === "all" ? "all" : +t.dataset.sw; save(); paintShare(); return; }
     if (t.id === "copyimg") return copyImage(t);
     if (t.id === "plus") return setCount(S.n + 1);
     if (t.id === "minus") return setCount(S.n - 1);
     var card = t.closest(".dish");
     if (card) {
-      var it = items[+card.dataset.id];
+      var it = byId(+card.dataset.id); if (!it) return;
+      if (t.dataset.del) { items.splice(items.indexOf(it), 1); renderDishList(); paintAll(); return; }
       if (t.dataset.p != null) { var p = +t.dataset.p, ids = sharesOf(it); ids = it.shares[p] != null ? ids.filter(function (x) { return x !== p; }) : ids.concat(p); it.shares = evenShares(ids.sort(function (a, b) { return a - b; })); }
       else if (t.dataset.all) { var every = []; for (var k = 0; k < S.n; k++) every.push(k); it.shares = sharesOf(it).length === S.n ? {} : evenShares(every); }
       else if (t.dataset.open) it.open = !it.open;
@@ -559,12 +653,19 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       $$('[data-copyp="' + i + '"]').forEach(function (a) { a.textContent = "Copy " + nm(i) + "'s breakdown"; });
       items.forEach(paintDish); paintAll(); return;
     }
-    if (t.dataset.sl != null) { var it = items[+t.closest(".dish").dataset.id]; setShare(it, +t.dataset.sl, +t.value); syncSliders(it); paintAll(); return; }
+    if (t.dataset.sl != null) { var it = byId(+t.closest(".dish").dataset.id); if (!it) return; setShare(it, +t.dataset.sl, +t.value); syncSliders(it); paintAll(); return; }
+    if (t.id === "billTitle") { bills[cur].title = t.value.slice(0, 28); var tb = $('.tab[data-bill="' + cur + '"]'); if (tb) tb.textContent = t.value.trim() || "Bill"; paintAll(); return; }
     if (t.id === "tipamt") { S.tipMode = "amt"; S.tipAmtCents = parseMoney(t.value); $$("#presets button").forEach(function (b) { b.setAttribute("aria-pressed", "false"); }); paintAll(); }
     if (t.id === "taxamt") { S.taxCents = parseMoney(t.value); paintAll(); }
   });
 
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter") return; var id = e.target.id;
+    if (id === "addName") { e.preventDefault(); $("#addPrice").focus(); }
+    else if (id === "addPrice" || id === "addQty") { e.preventDefault(); addItem(); }
+  });
+
   load();
-  renderPeople(); renderDishes(); renderTip(); renderTotals(); paintAll();
+  renderAll();
 })();
 </script>
