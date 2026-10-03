@@ -659,7 +659,9 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       body += '<div class="line total"><span>' + name + "'s part of everything</span><b>" + money(A.share[id]) + "</b></div>";
       A.bills.forEach(function (x) { if (x.b.payer === id) body += '<div class="line"><span>Paid the ' + esc(x.b.title || "bill") + ' bill</span><b class="minus">-' + money(x.c.grand) + "</b></div>"; });
       body += '<div class="final' + (back ? " back" : "") + '"><span>' + esc(resultWords(A, id)) + "</span></div>" +
-        '<div class="row2" style="margin-top:12px"><button class="ghost" data-copyp="' + id + '">Copy ' + name + "'s breakdown</button></div>";
+        '<div class="row2" style="margin-top:12px"><button class="primary" data-copypic="' + id + '">Copy picture</button><button class="ghost" data-copyp="' + id + '">Copy text</button></div>' +
+        (dlFn ? '<button class="ghost" data-savepic="' + id + '" style="margin-top:10px">Save picture to phone</button>' : "") +
+        '<div id="pimg-' + id + '"></div>';
     }
     return '<div class="card person" style="--h:' + hueOf(id) + '"><div class="phead">' + av(id, "lg") + "<h3>" + name + '</h3><div class="res' + (back ? " back" : "") + '"><small>' + (Math.abs(net) < 1 ? "all square" : back ? "gets back" : "pays") + "</small><b>" + money(Math.abs(net)) + "</b></div></div>" +
       '<div class="pbody"><p class="sentence">' + esc(resultWords(A, id)) + '</p><p class="hint">' + name + "'s part of everything: <strong>" + money(A.share[id]) + "</strong>" + (A.paid[id] ? " · paid " + money(A.paid[id]) + " at the table" : "") + "</p>" +
@@ -803,11 +805,27 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     for (var i = 0; i < ops.length; i++) ops[i]();
     return cv;
   }
+  function copyCanvas(cv, onOk, onFail) {
+    try {
+      var blob = new Promise(function (res) { cv.toBlob(res, "image/png"); });
+      navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]).then(onOk, onFail);
+    } catch (e) { onFail(); }
+  }
+  function copyPersonPicture(btn, id) {
+    var cv = drawPicture(calcAll(), id), box = $("#pimg-" + id), url = cv.toDataURL("image/png");
+    var show = function (note) { if (box) box.innerHTML = '<p class="hint" style="margin:12px 0 8px">' + note + '</p><img src="' + url + '" alt="Picture of ' + esc(nm(id)) + '\'s breakdown" style="width:100%;border-radius:14px;border:1px solid var(--line);display:block">'; };
+    copyCanvas(cv, function () { var o = btn.textContent; btn.textContent = "Copied!"; setTimeout(function () { btn.textContent = o; }, 1600); show("Copied. Paste it in your text. Here's what it looks like:"); },
+      function () { show("Copying is blocked here. Press and hold the picture below, then tap Copy or Save."); });
+  }
+  function savePersonPicture(btn, id) {
+    if (!dlFn) return;
+    drawPicture(calcAll(), id).toBlob(function (b) { dlFn.save({ filename: "split-the-check-" + nm(id).toLowerCase().replace(/[^a-z0-9]+/g, "-") + ".png", data: b }).then(function () { var o = btn.textContent; btn.textContent = "Saved!"; setTimeout(function () { btn.textContent = o; }, 1600); }, function () {}); }, "image/png");
+  }
   function copyImage(btn) {
     var note = $("#imgNote"), ok = function () { var o = btn.textContent; btn.textContent = "Copied!"; setTimeout(function () { btn.textContent = o; }, 1600); },
       fail = function () { note.style.color = "var(--warn)"; note.textContent = "Copying is blocked here. Press and hold the picture, then tap Copy or Save."; };
     if (!lastCanvas) return;
-    try { lastCanvas.toBlob(function (b) { try { navigator.clipboard.write([new ClipboardItem({ "image/png": b })]).then(ok, fail); } catch (e) { fail(); } }, "image/png"); } catch (e) { fail(); }
+    copyCanvas(lastCanvas, ok, fail);
   }
   function saveImage(btn) {
     if (!lastCanvas || !dlFn) return;
@@ -889,6 +907,8 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     if (t.id === "swRound") { st.roundUp = !st.roundUp; return render(); }
     if (t.id === "copyAll") return copyText(allText(calcAll()), t);
     if (t.dataset.copyp) return copyText(personText(calcAll(), +t.dataset.copyp), t);
+    if (t.dataset.copypic) return copyPersonPicture(t, +t.dataset.copypic);
+    if (t.dataset.savepic) return savePersonPicture(t, +t.dataset.savepic);
     if (t.dataset.sw) { st.shareWho = t.dataset.sw === "all" ? "all" : +t.dataset.sw; save(); return paintShare(); }
     if (t.id === "copyImg") return copyImage(t);
     if (t.id === "saveImg") return saveImage(t);
