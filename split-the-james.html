@@ -213,7 +213,7 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
     step: 0, dir: 1, n: 4,
     names: ["Me", "Friend 1", "Friend 2", "Friend 3"],
     taxCents: 4594, taxFollows: true, tipFollows: true,
-    tipMode: "pct", tipPct: 20, tipAmtCents: 0
+    tipMode: "amt", tipPct: 20, tipAmtCents: 12000
   };
   var shown = {}; // animated number memory
   var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -369,7 +369,7 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
     var pre = [0, 15, 18, 20, 25].map(function (v) { return '<button data-pct="' + v + '" aria-pressed="' + (S.tipMode === "pct" && S.tipPct === v) + '">' + (v ? v + "%" : "None") + "</button>"; }).join("");
     var rate = (S.taxCents / subtotal() * 100).toFixed(2).replace(/\.?0+$/, "");
     return '<h2>Tip and tax</h2><p class="lede">There\'s no tip on this receipt, so add one here.</p>' +
-      '<div class="tipnote">No tip line found on the receipt. Tip is figured on the ' + money(subtotal()) + ' pre-tax subtotal.</div>' +
+      '<div class="tipnote">No tip line on the receipt. Your ' + money(S.tipMode === "amt" ? S.tipAmtCents : tipCents()) + ' tip is filled in. Percent buttons figure tip on the ' + money(subtotal()) + ' pre-tax subtotal.</div>' +
       '<div class="card stack"><div><p class="sec">Tip</p><div class="big" id="tipbig">' + money(tipCents()) + '</div></div>' +
       '<div class="presets" id="presets">' + pre + "</div>" +
       '<div class="field"><label for="tipamt">Or enter an exact tip</label><div class="money"><span>$</span><input id="tipamt" inputmode="decimal" placeholder="0.00" value="' + (S.tipMode === "amt" ? (S.tipAmtCents / 100).toFixed(2) : "") + '"></div></div></div>' +
