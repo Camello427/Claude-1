@@ -144,7 +144,8 @@ h2 { font: 800 21px/1.15 var(--f-display); letter-spacing: -.01em; margin: 0 0 4
 .icons { display: flex; gap: 6px; margin-left: auto; }
 .bar { display: flex; height: 14px; border-radius: 99px; overflow: hidden; background: var(--line); gap: 2px; margin-top: 12px; }
 .bar i { display: block; height: 100%; background: hsl(var(--h) var(--ps) var(--pl)); transition: width .35s cubic-bezier(.2,.8,.2,1); }
-.tbl { display: grid; grid-template-columns: 1fr auto auto; column-gap: 18px; row-gap: 8px; margin-top: 12px; align-items: center; }
+.tbl { display: grid; grid-template-columns: 1fr auto; column-gap: 18px; row-gap: 8px; margin-top: 12px; align-items: center; }
+.tbl .pct { font: 600 14px var(--f-mono); color: hsl(var(--h) var(--ps) var(--pl)); background: hsl(var(--h) var(--ps) var(--pl) / .13); border-radius: 6px; padding: 1px 6px; flex: none; }
 .tbl .who { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 16px; }
 .tbl .who span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tbl .pc { font: 400 14px var(--f-mono); color: var(--muted); text-align: right; }
@@ -378,7 +379,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   }
   function sharers(it) { return people.map(function (p) { return p.id; }).filter(function (id) { return it.shares[id] != null; }); }
   function isEven(it) { var ids = sharers(it); return ids.length > 1 && ids.every(function (id) { return Math.abs(it.shares[id] - 100 / ids.length) < 0.01; }); }
-  function splitWords(it, id) { var ids = sharers(it); if (ids.length < 2) return "all " + nm(id) + "'s"; return isEven(it) ? "split " + ids.length + " ways (" + pcs(it.shares[id]) + ")" : pcs(it.shares[id]) + " of it"; }
+  function splitWords(it, id) { var ids = sharers(it); if (ids.length < 2) return "all " + nm(id) + "'s (100%)"; return isEven(it) ? "split " + ids.length + " ways (" + pcs(it.shares[id]) + ")" : pcs(it.shares[id]) + " of it"; }
   function shownAmt(a) { return st.roundUp ? Math.ceil(a / 100) * 100 : a; }
 
   /* ================= math ================= */
@@ -554,7 +555,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
           '<input type="range" min="0" max="100" step="1" value="' + Math.round(it.shares[id]) + '" data-sl="' + id + '" style="--c:hsl(' + hueOf(id) + ' var(--ps) var(--pl));--p:' + it.shares[id] + '%" aria-label="' + esc(nm(id)) + ' share"></div>';
       }).join("") + '<div class="row2"><button class="ghost" data-even="1">Make it even</button><button class="primary" data-open="1">Done</button></div></div>';
     }
-    return bar + '<div class="tbl">' + ids.map(function (id) { return '<span class="who">' + dot(id) + "<span>" + esc(nm(id)) + '</span></span><span class="pc">' + (ids.length > 1 ? pcs(it.shares[id]) : "") + '</span><span class="am">' + money(sp[id]) + "</span>"; }).join("") + "</div>" +
+    return bar + '<div class="tbl">' + ids.map(function (id) { return '<span class="who">' + dot(id) + "<span>" + esc(nm(id)) + '</span><b class="pct" style="--h:' + hueOf(id) + '">' + pcs(it.shares[id]) + '</b></span><span class="am">' + money(sp[id]) + "</span>"; }).join("") + "</div>" +
       (ids.length > 1 ? '<button class="linkbtn" data-open="1" style="margin-top:6px">Not even? Change the split</button>' : "");
   }
   function paintItems(b) { var el = $("#items"); if (!el) return; el.innerHTML = b.items.length ? b.items.map(function (it) { return itemHTML(b, it); }).join("") : '<div class="card empty">Nothing here yet. Add the first thing below.</div>'; }
@@ -666,7 +667,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   }
 
   /* ================= text export ================= */
-  function itemText(it) { var sp = itemSplit(it), ids = sharers(it); return "  " + it.name + (it.qty > 1 ? " ×" + it.qty : "") + " " + money(it.price) + (ids.length ? ": " + ids.map(function (id) { return nm(id) + " " + money(sp[id]) + (ids.length > 1 ? " (" + pcs(it.shares[id]) + ")" : ""); }).join(", ") : ": no names yet"); }
+  function itemText(it) { var sp = itemSplit(it), ids = sharers(it); return "  " + it.name + (it.qty > 1 ? " ×" + it.qty : "") + " " + money(it.price) + (ids.length ? ": " + ids.map(function (id) { return nm(id) + " (" + pcs(it.shares[id]) + ") " + money(sp[id]); }).join(", ") : ": no names yet"); }
   function allText(A) {
     var l = ["NIGHT OUT: " + A.bills.length + (A.bills.length === 1 ? " bill, " : " bills, ") + money(A.total) + " total"];
     A.bills.forEach(function (x) { l.push("• " + billName(x.b) + ": " + money(x.c.grand) + (x.b.payer != null && person(x.b.payer) ? ", paid by " + nm(x.b.payer) : ", not paid yet")); });
@@ -759,7 +760,10 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
           var yy = 160;
           rows.forEach(function (r) {
             row(top, yy, r.it.name + (r.it.qty > 1 ? " ×" + r.it.qty : ""), money(r.it.price), { bold: true, size: 30 }); yy += 46;
-            r.ids.forEach(function (id) { var yv = yy, pct = r.ids.length > 1 ? pcs(r.it.shares[id]) : ""; op(function () { circ(L + 22, top + yv - 9, 10, col(id)); text(nm(id), L + 42, top + yv, "500 27px " + SANS, MUTED); if (pct) text(pct, R - 190, top + yv, "500 27px " + MONO, MUTED, "right"); text(money(r.sp[id]), R, top + yv, "500 27px " + MONO, MUTED, "right"); }); yy += 42; });
+            r.ids.forEach(function (id) { var yv = yy, pct = pcs(r.it.shares[id]); op(function () {
+              circ(L + 22, top + yv - 9, 10, col(id)); text(nm(id), L + 42, top + yv, "500 27px " + SANS, MUTED);
+              g.font = "500 27px " + SANS; var w = g.measureText(nm(id)).width; text(pct, L + 42 + w + 14, top + yv, "700 25px " + MONO, col(id));
+              text(money(r.sp[id]), R, top + yv, "500 27px " + MONO, MUTED, "right"); }); yy += 42; });
             yy += 12;
           });
           var ys = yy + 10; op(function () { g.fillStyle = LINE; g.fillRect(L, top + ys, IW - 64, 2); });
