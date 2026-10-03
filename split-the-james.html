@@ -51,11 +51,15 @@ section.blk { margin-top: 30px; scroll-margin-top: 12px; }
 .sh { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 0 12px; }
 h2 { font: 800 24px/1.1 var(--f-display); letter-spacing: -.02em; margin: 0; }
 .hint { color: var(--muted); font-size: 13px; }
+.sec { font: 700 12px var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 
 /* header */
 .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .top h1 { font: 800 32px/1 var(--f-display); letter-spacing: -.03em; margin: 0; }
 .top p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+.rightcol { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: none; }
+.resetbtn { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 14px; font: 700 13px var(--f-body); color: var(--muted); transition: background .2s, color .2s, border-color .2s; }
+.resetbtn.arm { background: var(--warn); border-color: var(--warn); color: #fff; }
 .billpill { text-align: right; flex: none; }
 .billpill small { display: block; color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
 .billpill b { font: 500 22px var(--f-mono); font-variant-numeric: tabular-nums; }
@@ -179,7 +183,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
 <div id="app">
   <header class="top">
     <div><h1>Split the Check</h1><p>The James · Babylon · Check #140 · 9/25</p></div>
-    <div class="billpill"><small>Bill total</small><b id="billtotal">$0.00</b></div>
+    <div class="rightcol"><button class="resetbtn" id="reset">Reset</button><div class="billpill"><small>Bill total</small><b id="billtotal">$0.00</b></div></div>
   </header>
 
   <section class="blk" id="sPeople"></section>
@@ -204,8 +208,27 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     ["Weekly Pasta (special)", 1, 3600], ["Michelob Ultra Light", 1, 900], ["Save the Robots IPA", 1, 1000], ["Sticky Toffee Cake", 1, 1500]
   ].map(function (r, i) { return { id: i, name: r[0], qty: r[1], price: r[2], shares: {}, open: false }; });
 
-  var S = { n: 4, names: ["", "", "", ""], taxCents: 4594, taxFollows: true, tipFollows: true,
-    tipMode: "amt", tipPct: 20, tipAmtCents: 12000 };
+  var KEY = "split-the-check-the-james-v1";
+  function fresh() { return { n: 4, names: ["", "", "", ""], taxCents: 4594, taxFollows: true, tipFollows: true, tipMode: "amt", tipPct: 20, tipAmtCents: 12000, shareWho: "all" }; }
+  var S = fresh();
+  function save() { try { localStorage.setItem(KEY, JSON.stringify({ v: 1, S: S, items: items.map(function (i) { return { shares: i.shares, open: i.open }; }) })); } catch (e) {} }
+  function load() { // restore the last session on this device, ignoring anything malformed
+    try {
+      var d = JSON.parse(localStorage.getItem(KEY) || "null"); if (!d || d.v !== 1 || !d.S) return;
+      var f = fresh(); Object.keys(f).forEach(function (k) { if (d.S[k] !== undefined && typeof d.S[k] === typeof f[k]) f[k] = d.S[k]; });
+      if (!Array.isArray(d.S.names)) d.S.names = f.names;
+      f.names = d.S.names.map(String); f.n = Math.max(1, Math.min(12, Math.round(f.n)));
+      while (f.names.length < f.n) f.names.push("");
+      if (f.tipMode !== "pct" && f.tipMode !== "amt") f.tipMode = "amt";
+      if (f.shareWho !== "all" && !(typeof f.shareWho === "number" && f.shareWho < f.n)) f.shareWho = "all";
+      S = f;
+      (d.items || []).forEach(function (x, i) {
+        var it = items[i]; if (!it || !x) return; var o = {}, sum = 0;
+        Object.keys(x.shares || {}).forEach(function (k) { var v = +x.shares[k]; if (+k < S.n && v >= 0 && v <= 100) { o[+k] = Math.round(v); sum += o[+k]; } });
+        if (sum === 100) it.shares = o; it.open = !!x.open && sum === 100;
+      });
+    } catch (e) {}
+  }
   var shown = {};
   var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -270,7 +293,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   function setCount(n) {
     n = Math.max(1, Math.min(12, n)); if (n === S.n) return;
     while (S.names.length < n) S.names.push("");
-    S.n = n;
+    S.n = n; if (S.shareWho !== "all" && S.shareWho >= n) S.shareWho = "all";
     items.forEach(function (it) {
       var ids = sharesOf(it).filter(function (p) { return p < n; });
       if (ids.length !== sharesOf(it).length) { var v = lr(100, ids.map(function (p) { return it.shares[p]; })), o = {}; ids.forEach(function (p, k) { o[p] = v[k]; }); it.shares = ids.length ? o : {}; }
@@ -355,7 +378,8 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       cards += '<div class="card pcard" style="--h:' + hue(i) + ';animation-delay:' + (i * 60) + 'ms">' + av(i, "lg") + '<div class="who" data-who="' + i + '">' + esc(nm(i)) + '</div><div class="owes" data-own="' + i + '">$0.00</div><div class="brk" data-brk="' + i + '"></div><button class="mini" data-copyp="' + i + '">Copy ' + esc(nm(i)) + '\'s breakdown</button></div>';
     $("#sTotals").innerHTML = '<div class="sh"><h2>What everyone owes</h2></div><div class="tgrid">' + cards + '</div>' +
       '<div class="card" style="margin-top:12px"><div class="check"><span>Food</span><b id="cFood"></b></div><div class="check"><span>Tax</span><b id="cTax"></b></div><div class="check"><span>Tip</span><b id="cTip"></b></div><div class="check" id="cRow"><span id="cLbl"></span><b id="cVal"></b></div></div>' +
-      '<div style="margin-top:16px"><button class="primary" id="copy">Copy full breakdown for everyone</button><p class="hint" style="margin:8px 0 6px">Includes each dish, their percentage, and tax and tip. Paste it into your group text.</p><pre class="copybox" id="preview"></pre></div>';
+      '<div style="margin-top:16px"><button class="primary" id="copy">Copy full breakdown for everyone</button><p class="hint" style="margin:8px 0 6px">Includes each dish, their percentage, and tax and tip. Paste it into your group text.</p><pre class="copybox" id="preview"></pre></div>' +
+      '<div class="card stack" style="margin-top:16px"><div><p class="sec" style="margin:0 0 4px">Share as a picture</p><p class="hint" style="margin:0">Shows every dish with color bars for each person\'s percentage.</p></div><div class="chips" id="shareChips"></div><img id="shareimg" alt="Itemized breakdown picture" style="width:100%;border-radius:14px;border:1px solid var(--line);display:block"><button class="primary" id="copyimg">Copy picture</button><p class="hint" id="imgnote" style="margin:0">If copying is blocked, press and hold the picture, then tap Copy or Save.</p></div>';
   }
   function pct(v) { return v + "%"; }
   function personLines(c, i) {
@@ -383,6 +407,94 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   }
   function selectPreview() { var el = $("#preview"); if (!el) return; var r = document.createRange(); r.selectNodeContents(el); var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
 
+
+  /* ---- picture export (drawn on a canvas, light theme so it reads anywhere) ---- */
+  var shareTimer = null, lastCanvas = null;
+  function scheduleShare() { clearTimeout(shareTimer); shareTimer = setTimeout(paintShare, 220); }
+  function paintShare() {
+    var img = $("#shareimg"); if (!img) return;
+    var chips = '<button class="chip all" data-sw="all" aria-pressed="' + (S.shareWho === "all") + '">Everyone</button>';
+    for (var i = 0; i < S.n; i++) chips += '<button class="chip" data-sw="' + i + '" style="--h:' + hue(i) + '" aria-pressed="' + (S.shareWho === i) + '">' + av(i) + '<span class="t">' + esc(nm(i)) + "</span></button>";
+    $("#shareChips").innerHTML = chips;
+    try { lastCanvas = drawShare(compute(), S.shareWho); img.src = lastCanvas.toDataURL("image/png"); } catch (e) {}
+  }
+  function drawShare(c, who) {
+    var W = 1080, P = 48, IW = W - P * 2, SANS = '"DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif', MONO = '"DM Mono", ui-monospace, Menlo, monospace';
+    var INK = "#131a33", MUTED = "#5b6685", LINE = "#dce2f3", ACC = "#3d5afe";
+    var col = function (i) { return "hsl(" + hue(i) + " 68% 47%)"; };
+    var meas = document.createElement("canvas").getContext("2d");
+    var rows = items.filter(function (it) { var ids = sharesOf(it); return ids.length && (who === "all" || (it.shares[who] || 0) > 0); });
+    // legend layout per row (wraps onto extra lines)
+    rows.forEach(function (it) {
+      meas.font = "600 26px " + SANS; var lines = [[]], x = 0;
+      sharesOf(it).sort(function (a, b) { return a - b; }).forEach(function (p) {
+        var label = nm(p) + " " + it.shares[p] + "%", w = 30 + meas.measureText(label).width + 28;
+        if (x + w > IW - 48 && lines[lines.length - 1].length) { lines.push([]); x = 0; }
+        lines[lines.length - 1].push({ p: p, label: label, w: w }); x += w;
+      });
+      it._lg = lines; it._bo = who === "all" ? 74 : 112; it._h = it._bo + 66 + (lines.length - 1) * 40 + 30;
+    });
+    var HEAD = 330, GAP = 20, rowsH = rows.length ? rows.reduce(function (a, it) { return a + it._h + GAP; }, 0) : 140;
+    var tot = who === "all" ? c.totals.length * 74 + 150 : 5 * 66 + 30;
+    var H = HEAD + 40 + rowsH + 20 + tot + 120;
+    var cv = document.createElement("canvas"); cv.width = W; cv.height = H; var g = cv.getContext("2d");
+    function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+    function text(t, x, y, font, color, align) { g.font = font; g.fillStyle = color; g.textAlign = align || "left"; g.textBaseline = "alphabetic"; g.fillText(t, x, y); }
+    function fit(t, font, maxW) { g.font = font; while (t.length > 1 && g.measureText(t).width > maxW) t = t.slice(0, -2) + "…"; return t; }
+    g.fillStyle = "#f4f6fc"; g.fillRect(0, 0, W, H);
+    // header band
+    g.fillStyle = ACC; rr(0, 0, W, HEAD, 0); g.fill();
+    text("THE JAMES · CHECK #140 · 9/25", P, 78, "700 28px " + SANS, "rgba(255,255,255,.8)");
+    var title = who === "all" ? "Check split" : fit(nm(who) + " owes", "800 60px " + SANS, IW);
+    text(title, P, 160, "800 60px " + SANS, "#fff");
+    text(money(who === "all" ? c.grand : c.totals[who]), P, 270, "500 108px " + MONO, "#fff");
+    if (who === "all") text("bill total", P + 640, 270, "500 34px " + SANS, "rgba(255,255,255,.8)");
+    // dishes
+    var y = HEAD + 40;
+    if (!rows.length) { text("No dishes assigned yet", W / 2, y + 80, "500 34px " + SANS, MUTED, "center"); y += 140; }
+    rows.forEach(function (it) {
+      g.fillStyle = "#fff"; rr(P, y, IW, it._h, 28); g.fill(); g.strokeStyle = LINE; g.lineWidth = 2; g.stroke();
+      var mine = who === "all" ? 0 : it.price * it.shares[who] / 100;
+      text(fit(it.name + (it.qty > 1 ? " ×" + it.qty : ""), "700 36px " + SANS, IW - 330), P + 28, y + 52, "700 36px " + SANS, INK);
+      text(who === "all" ? money(it.price) : money(Math.round(mine)), P + IW - 28, y + 52, "500 36px " + MONO, INK, "right");
+      if (who !== "all") text(it.shares[who] + "% of " + money(it.price), P + 28, y + 92, "400 26px " + MONO, MUTED);
+      // segmented bar
+      var bx = P + 28, bw = IW - 56, by = y + it._bo, ids = sharesOf(it).sort(function (a, b) { return a - b; }), cx = bx;
+      g.save(); rr(bx, by, bw, 30, 15); g.clip(); g.fillStyle = LINE; g.fillRect(bx, by, bw, 30);
+      ids.forEach(function (p) { var w = bw * it.shares[p] / 100; g.fillStyle = col(p); g.fillRect(cx, by, w - (p === ids[ids.length - 1] ? 0 : 3), 30); cx += w; });
+      g.restore();
+      // legend
+      it._lg.forEach(function (line, li) {
+        var lx = bx, ly = y + it._bo + 66 + li * 40;
+        line.forEach(function (m) { g.fillStyle = col(m.p); g.beginPath(); g.arc(lx + 11, ly - 9, 11, 0, 6.2832); g.fill(); text(m.label, lx + 30, ly, "600 26px " + SANS, who !== "all" && m.p === who ? INK : MUTED); lx += m.w; });
+      });
+      y += it._h + GAP;
+    });
+    // totals card
+    y += 20; g.fillStyle = "#fff"; rr(P, y, IW, tot, 28); g.fill(); g.strokeStyle = LINE; g.lineWidth = 2; g.stroke();
+    var ty = y + 68, L = P + 28, R = P + IW - 28;
+    if (who === "all") {
+      c.totals.forEach(function (v, i) { g.fillStyle = col(i); g.beginPath(); g.arc(L + 16, ty - 12, 16, 0, 6.2832); g.fill(); text(fit(nm(i), "600 34px " + SANS, 560), L + 48, ty, "600 34px " + SANS, INK); text(money(v), R, ty, "500 36px " + MONO, INK, "right"); ty += 74; });
+      g.fillStyle = LINE; g.fillRect(L, ty - 36, IW - 56, 2);
+      text("Food " + money(c.sub) + " · Tax " + money(c.tax) + " · Tip " + money(c.tip), L, ty + 18, "400 26px " + MONO, MUTED);
+    } else {
+      [["Food", c.food[who], ""], ["Tax", c.taxO[who], S.taxFollows ? "in proportion to food" : "split evenly"], ["Tip", c.tipO[who], S.tipFollows ? "in proportion to food" : "split evenly"]].forEach(function (r) {
+        text(r[0], L, ty, "500 34px " + SANS, INK); if (r[2]) text(r[2], L + 130, ty, "400 24px " + SANS, MUTED); text(money(r[1]), R, ty, "500 36px " + MONO, INK, "right"); ty += 66;
+      });
+      g.fillStyle = LINE; g.fillRect(L, ty - 40, IW - 56, 2); ty += 6;
+      g.fillStyle = col(who); g.beginPath(); g.arc(L + 16, ty - 12, 16, 0, 6.2832); g.fill();
+      text("Total", L + 48, ty, "800 38px " + SANS, INK); text(money(c.totals[who]), R, ty, "800 44px " + MONO, ACC, "right");
+    }
+    text("Split with Split the Check", W / 2, H - 50, "500 24px " + SANS, MUTED, "center");
+    return cv;
+  }
+  function copyImage(btn) {
+    var note = $("#imgnote"), ok = function () { var o = btn.textContent; btn.textContent = "Copied!"; setTimeout(function () { btn.textContent = o; }, 1600); },
+      fail = function () { note.style.color = "var(--warn)"; note.textContent = "Copying is blocked here. Press and hold the picture, then tap Copy or Save."; };
+    if (!lastCanvas) return;
+    try { lastCanvas.toBlob(function (b) { try { navigator.clipboard.write([new ClipboardItem({ "image/png": b })]).then(ok, fail); } catch (e) { fail(); } }, "image/png"); } catch (e) { fail(); }
+  }
+
   /* ---- paint everything that depends on the numbers ---- */
   function paintAll() {
     var c = compute();
@@ -402,12 +514,22 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     $("#cVal").textContent = money(ok ? c.grand : c.grand - c.sum);
     $("#pills").innerHTML = c.totals.map(function (v, i) { return '<div class="pill">' + av(i) + '<span><span class="nm">' + esc(nm(i)) + "</span><b>" + money(v) + "</b></span></div>"; }).join("");
     var pv = $("#preview"); if (pv) pv.textContent = summaryText(c);
+    save(); scheduleShare();
     var l = $("#dleft"); l.textContent = c.unassigned >= 0.5 ? money(c.unassigned) + " unassigned" : "All assigned ✓"; l.className = "left" + (c.unassigned >= 0.5 ? "" : " ok");
   }
 
   /* ---- events ---- */
   document.addEventListener("click", function (e) {
     var t = e.target.closest("button"); if (!t) return;
+    if (t.id === "reset") {
+      if (!t.classList.contains("arm")) { t.classList.add("arm"); t.textContent = "Tap again to clear"; clearTimeout(t._tm); t._tm = setTimeout(function () { t.classList.remove("arm"); t.textContent = "Reset"; }, 3200); return; }
+      clearTimeout(t._tm); t.classList.remove("arm"); t.textContent = "Reset";
+      S = fresh(); shown = {}; items.forEach(function (it) { it.shares = {}; it.open = false; });
+      try { localStorage.removeItem(KEY); } catch (err) {}
+      renderPeople(); renderDishes(); renderTip(); renderTotals(); paintAll(); window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" }); return;
+    }
+    if (t.dataset.sw != null) { S.shareWho = t.dataset.sw === "all" ? "all" : +t.dataset.sw; save(); paintShare(); return; }
+    if (t.id === "copyimg") return copyImage(t);
     if (t.id === "plus") return setCount(S.n + 1);
     if (t.id === "minus") return setCount(S.n - 1);
     var card = t.closest(".dish");
@@ -442,6 +564,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     if (t.id === "taxamt") { S.taxCents = parseMoney(t.value); paintAll(); }
   });
 
+  load();
   renderPeople(); renderDishes(); renderTip(); renderTotals(); paintAll();
 })();
 </script>
