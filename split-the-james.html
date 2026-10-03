@@ -3,44 +3,47 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* Layout: one scrolling page (people, dishes, tip & tax, totals) with a pinned live-totals bar. Crisp white, ink navy, electric blue accent, saturated person colors. */
+/* Layout: one scrolling page (people, dishes, tip & tax, totals) with a pinned live-totals bar. Soft gray ground, slate-blue accent, muted person colors. */
 :root {
-  --bg: #f5f6fb;
+  --bg: #f3f4f6;
   --surface: #ffffff;
-  --surface-2: #eef0f8;
-  --ink: #0e1128;
-  --muted: #5d6385;
-  --line: #e0e3f0;
-  --accent: #2c55ff;
+  --surface-2: #eceef2;
+  --ink: #1d2430;
+  --muted: #6a7384;
+  --line: #e1e4ea;
+  --accent: #4a6fa5;
   --accent-ink: #ffffff;
-  --accent-soft: #e4eaff;
-  --warn: #c2410c;
-  --warn-soft: #ffedd9;
-  --ok: #0f9d58;
-  --pl: 50%;
-  --ps: 85%;
+  --accent-soft: #e3eaf4;
+  --warn: #a8643a;
+  --warn-soft: #f6e8dc;
+  --ok: #3f8a6a;
+  --pl: 46%;
+  --ps: 42%;
   --pt: #ffffff;
-  --shadow: 0 1px 2px rgba(14,17,40,.05), 0 10px 28px rgba(44,85,255,.07);
+  --shadow: 0 1px 2px rgba(29,36,48,.05), 0 6px 18px rgba(29,36,48,.05);
   --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
   --f-body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0b0d1c; --surface: #151834; --surface-2: #1d2142; --ink: #f1f3ff; --muted: #9aa1cc; --line: #2a2f58;
-    --accent: #7b93ff; --accent-ink: #0b0d1c; --accent-soft: #232a5e; --warn: #ffb36b; --warn-soft: #3a2812; --ok: #4ade80;
-    --pl: 64%; --ps: 90%; --pt: #0b0d1c; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
+    --bg: #14171c; --surface: #1c2027; --surface-2: #252a33; --ink: #e8ebf0; --muted: #98a1b0; --line: #2d333d;
+    --accent: #8fb0e0; --accent-ink: #12161c; --accent-soft: #263244; --warn: #e0a77c; --warn-soft: #382a1f; --ok: #7cc4a0;
+    --pl: 66%; --ps: 48%; --pt: #12161c; --shadow: 0 1px 2px rgba(0,0,0,.35), 0 6px 18px rgba(0,0,0,.25);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0b0d1c; --surface: #151834; --surface-2: #1d2142; --ink: #f1f3ff; --muted: #9aa1cc; --line: #2a2f58;
-  --accent: #7b93ff; --accent-ink: #0b0d1c; --accent-soft: #232a5e; --warn: #ffb36b; --warn-soft: #3a2812; --ok: #4ade80;
-  --pl: 64%; --ps: 90%; --pt: #0b0d1c; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
-  color-scheme: dark;
+  --bg: #14171c; --surface: #1c2027; --surface-2: #252a33; --ink: #e8ebf0; --muted: #98a1b0; --line: #2d333d;
+    --accent: #8fb0e0; --accent-ink: #12161c; --accent-soft: #263244; --warn: #e0a77c; --warn-soft: #382a1f; --ok: #7cc4a0;
+    --pl: 66%; --ps: 48%; --pt: #12161c; --shadow: 0 1px 2px rgba(0,0,0,.35), 0 6px 18px rgba(0,0,0,.25);
+    color-scheme: dark;
 }
 * { box-sizing: border-box; }
-body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.4; padding-inline: 16px; -webkit-tap-highlight-color: transparent; }
+body { overflow-x: hidden; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.4; padding-inline: 16px; -webkit-tap-highlight-color: transparent; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body, button, input { touch-action: manipulation; }
+input, button { font-size: max(16px, 1em); }
 button { font: inherit; color: inherit; cursor: pointer; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
 #app { max-width: 600px; margin: 0 auto; padding-block: 18px 150px; }
@@ -76,7 +79,7 @@ h2 { font: 800 24px/1.1 var(--f-display); letter-spacing: -.02em; margin: 0; }
 .ppl { color: var(--muted); font-size: 14px; flex: 1; min-width: 120px; }
 .names { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 14px; }
 .namebox { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 14px; padding: 5px 8px 5px 5px; animation: pop .35s cubic-bezier(.3,1.5,.5,1) both; min-width: 0; }
-.namebox input { flex: 1; min-width: 0; font: 500 15px var(--f-body); background: transparent; color: var(--ink); border: none; outline: none; padding: 6px 2px; }
+.namebox input { flex: 1; min-width: 0; font: 500 16px var(--f-body); background: transparent; color: var(--ink); border: none; outline: none; padding: 6px 2px; }
 .namebox:focus-within { box-shadow: 0 0 0 2px var(--accent); }
 @keyframes pop { from { opacity: 0; transform: scale(.9) translateY(6px); } to { opacity: 1; transform: none; } }
 
@@ -130,7 +133,7 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 .money { display: flex; align-items: center; border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; padding: 0 12px; width: 140px; }
 .money:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .money span { color: var(--muted); font-family: var(--f-mono); }
-.money input { border: none; background: transparent; color: var(--ink); font: 500 18px var(--f-mono); padding: 10px 6px; width: 100%; min-width: 0; outline: none; text-align: right; }
+.money input { border: none; background: transparent; color: var(--ink); font: 500 18px var(--f-mono); padding: 10px 6px; touch-action: manipulation; width: 100%; min-width: 0; outline: none; text-align: right; }
 .switch { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; background: none; border: none; padding: 2px 0; }
 .switch .txt { flex: 1; min-width: 0; }
 .switch .txt b { display: block; font-weight: 700; }
@@ -160,7 +163,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
 .copybox { margin: 0; white-space: pre-wrap; font: 400 13px var(--f-mono); background: var(--surface-2); border-radius: 12px; padding: 12px; margin-top: 10px; max-height: 360px; overflow: auto; }
 
 /* pinned live totals */
-.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgba(14,17,40,.1); padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px)); }
+.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -6px 18px rgba(29,36,48,.08); padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px)); }
 .dockin { max-width: 600px; margin: 0 auto; padding-inline: 16px; }
 .dstat { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
 .dstat .left { color: var(--warn); }
@@ -193,7 +196,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
 <script>
 (function () {
   "use strict";
-  var HUES = [222, 8, 150, 38, 280, 335, 190, 95, 20, 250, 120, 310];
+  var HUES = [214, 8, 158, 36, 268, 332, 188, 84, 22, 240, 126, 306];
   // Receipt lines, prices in cents
   var items = [
     ["Creamed Spinach", 1, 1500], ["Tomahawk", 1, 18500], ["Tanqueray", 1, 1700], ["Caviar Bump", 4, 11200],
@@ -201,7 +204,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     ["Weekly Pasta (special)", 1, 3600], ["Michelob Ultra Light", 1, 900], ["Save the Robots IPA", 1, 1000], ["Sticky Toffee Cake", 1, 1500]
   ].map(function (r, i) { return { id: i, name: r[0], qty: r[1], price: r[2], shares: {}, open: false }; });
 
-  var S = { n: 4, names: ["Me", "Friend 1", "Friend 2", "Friend 3"], taxCents: 4594, taxFollows: true, tipFollows: true,
+  var S = { n: 4, names: ["", "", "", ""], taxCents: 4594, taxFollows: true, tipFollows: true,
     tipMode: "amt", tipPct: 20, tipAmtCents: 12000 };
   var shown = {};
   var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -210,7 +213,8 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
 
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function money(c) { var s = Math.abs(c) < 0.5 ? 0 : c; return "$" + (s / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-  function nm(i) { return (S.names[i] || "").trim() || "Guest " + (i + 1); }
+  function dflt(i) { return i === 0 ? "Me" : "Friend " + i; }
+  function nm(i) { return (S.names[i] || "").trim() || dflt(i); }
   function hue(i) { return HUES[i % HUES.length]; }
   function av(i, cls) { return '<span class="av ' + (cls || "") + '" data-avp="' + i + '" style="--h:' + hue(i) + '">' + esc(nm(i).charAt(0).toUpperCase()) + "</span>"; }
   function subtotal() { return items.reduce(function (a, it) { return a + it.price; }, 0); }
@@ -259,13 +263,13 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   /* ---- people ---- */
   function renderPeople() {
     var boxes = "";
-    for (var i = 0; i < S.n; i++) boxes += '<label class="namebox">' + av(i) + '<input data-i="' + i + '" value="' + esc(S.names[i]) + '" maxlength="14" placeholder="Name" aria-label="Name for person ' + (i + 1) + '"></label>';
+    for (var i = 0; i < S.n; i++) boxes += '<label class="namebox">' + av(i) + '<input data-i="' + i + '" value="' + esc(S.names[i]) + '" maxlength="14" placeholder="' + dflt(i) + '" aria-label="Name for person ' + (i + 1) + '"></label>';
     $("#sPeople").innerHTML = '<div class="sh"><h2>Who\'s splitting?</h2></div><div class="card"><div class="pp"><div class="stepper"><button class="round" id="minus" aria-label="Fewer people"' + (S.n <= 1 ? " disabled" : "") +
       '>−</button><div class="num" id="count">' + S.n + '</div><button class="round" id="plus" aria-label="More people"' + (S.n >= 12 ? " disabled" : "") + '>+</button></div><div class="ppl">people<br>(receipt says 4 guests)</div></div><div class="names">' + boxes + "</div></div>";
   }
   function setCount(n) {
     n = Math.max(1, Math.min(12, n)); if (n === S.n) return;
-    while (S.names.length < n) S.names.push(S.names.length === 0 ? "Me" : "Friend " + S.names.length);
+    while (S.names.length < n) S.names.push("");
     S.n = n;
     items.forEach(function (it) {
       var ids = sharesOf(it).filter(function (p) { return p < n; });
@@ -426,7 +430,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     var t = e.target;
     if (t.dataset.i != null) { // rename: update labels in place so typing keeps focus
       var i = +t.dataset.i; S.names[i] = t.value;
-      var ch = (t.value.trim() || "G").charAt(0).toUpperCase();
+      var ch = nm(i).charAt(0).toUpperCase();
       $$('[data-avp="' + i + '"]').forEach(function (a) { a.textContent = ch; });
       $$("#sDishes .chip[data-p='" + i + "'] .t").forEach(function (a) { a.textContent = nm(i); });
       $$('[data-who="' + i + '"]').forEach(function (a) { a.textContent = nm(i); });
