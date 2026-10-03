@@ -378,7 +378,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   }
   function sharers(it) { return people.map(function (p) { return p.id; }).filter(function (id) { return it.shares[id] != null; }); }
   function isEven(it) { var ids = sharers(it); return ids.length > 1 && ids.every(function (id) { return Math.abs(it.shares[id] - 100 / ids.length) < 0.01; }); }
-  function splitWords(it, id) { var ids = sharers(it); if (ids.length < 2) return "all " + nm(id) + "'s"; return isEven(it) ? "split " + ids.length + " ways" : pcs(it.shares[id]) + " of it"; }
+  function splitWords(it, id) { var ids = sharers(it); if (ids.length < 2) return "all " + nm(id) + "'s"; return isEven(it) ? "split " + ids.length + " ways (" + pcs(it.shares[id]) + ")" : pcs(it.shares[id]) + " of it"; }
   function shownAmt(a) { return st.roundUp ? Math.ceil(a / 100) * 100 : a; }
 
   /* ================= math ================= */
@@ -662,7 +662,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   }
 
   /* ================= text export ================= */
-  function itemText(it) { var sp = itemSplit(it), ids = sharers(it); return "  " + it.name + (it.qty > 1 ? " ×" + it.qty : "") + " " + money(it.price) + (ids.length ? ": " + ids.map(function (id) { return nm(id) + " " + money(sp[id]); }).join(", ") : ": no names yet"); }
+  function itemText(it) { var sp = itemSplit(it), ids = sharers(it); return "  " + it.name + (it.qty > 1 ? " ×" + it.qty : "") + " " + money(it.price) + (ids.length ? ": " + ids.map(function (id) { return nm(id) + " " + money(sp[id]) + (ids.length > 1 ? " (" + pcs(it.shares[id]) + ")" : ""); }).join(", ") : ": no names yet"); }
   function allText(A) {
     var l = ["NIGHT OUT: " + A.bills.length + (A.bills.length === 1 ? " bill, " : " bills, ") + money(A.total) + " total"];
     A.bills.forEach(function (x) { l.push("• " + billName(x.b) + ": " + money(x.c.grand) + (x.b.payer != null && person(x.b.payer) ? ", paid by " + nm(x.b.payer) : ", not paid yet")); });
@@ -755,7 +755,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
           var yy = 160;
           rows.forEach(function (r) {
             row(top, yy, r.it.name + (r.it.qty > 1 ? " ×" + r.it.qty : ""), money(r.it.price), { bold: true, size: 30 }); yy += 46;
-            r.ids.forEach(function (id) { var yv = yy; op(function () { circ(L + 22, top + yv - 9, 10, col(id)); text(nm(id), L + 42, top + yv, "500 27px " + SANS, MUTED); text(money(r.sp[id]), R, top + yv, "500 27px " + MONO, MUTED, "right"); }); yy += 42; });
+            r.ids.forEach(function (id) { var yv = yy, pct = r.ids.length > 1 ? pcs(r.it.shares[id]) : ""; op(function () { circ(L + 22, top + yv - 9, 10, col(id)); text(nm(id), L + 42, top + yv, "500 27px " + SANS, MUTED); if (pct) text(pct, R - 190, top + yv, "500 27px " + MONO, MUTED, "right"); text(money(r.sp[id]), R, top + yv, "500 27px " + MONO, MUTED, "right"); }); yy += 42; });
             yy += 12;
           });
           row(top, yy + 20, "Tax " + money(c.tax) + " · Tip " + money(c.tip), "", { color: MUTED, size: 26 });
