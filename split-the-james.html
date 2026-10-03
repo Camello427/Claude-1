@@ -1,127 +1,113 @@
 <title>Split the Check</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* Layout: one-column phone-first wizard. Four steps, sticky bottom nav, receipt-style mono for money. */
+/* Layout: one scrolling page (people, dishes, tip & tax, totals) with a pinned live-totals bar. Crisp white, ink navy, electric blue accent, saturated person colors. */
 :root {
-  --bg: #eef2ef;
+  --bg: #f5f6fb;
   --surface: #ffffff;
-  --surface-2: #f4f7f5;
-  --ink: #13201a;
-  --muted: #5b6b63;
-  --line: #d9e1dc;
-  --accent: #0e6b4e;
+  --surface-2: #eef0f8;
+  --ink: #0e1128;
+  --muted: #5d6385;
+  --line: #e0e3f0;
+  --accent: #2c55ff;
   --accent-ink: #ffffff;
-  --accent-soft: #dcefe6;
-  --warn: #a8560a;
-  --warn-soft: #fbead3;
-  --pl: 42%;
+  --accent-soft: #e4eaff;
+  --warn: #c2410c;
+  --warn-soft: #ffedd9;
+  --ok: #0f9d58;
+  --pl: 50%;
+  --ps: 85%;
   --pt: #ffffff;
-  --shadow: 0 1px 2px rgba(19,32,26,.06), 0 8px 24px rgba(19,32,26,.06);
+  --shadow: 0 1px 2px rgba(14,17,40,.05), 0 10px 28px rgba(44,85,255,.07);
   --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
   --f-body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0b1410; --surface: #131f1a; --surface-2: #192823; --ink: #e8f1ec; --muted: #8fa399;
-    --line: #25362f; --accent: #3fdc98; --accent-ink: #04200f; --accent-soft: #123127;
-    --warn: #f0b45c; --warn-soft: #3a2a12; --pl: 62%; --pt: #08140f;
-    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    --bg: #0b0d1c; --surface: #151834; --surface-2: #1d2142; --ink: #f1f3ff; --muted: #9aa1cc; --line: #2a2f58;
+    --accent: #7b93ff; --accent-ink: #0b0d1c; --accent-soft: #232a5e; --warn: #ffb36b; --warn-soft: #3a2812; --ok: #4ade80;
+    --pl: 64%; --ps: 90%; --pt: #0b0d1c; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0b1410; --surface: #131f1a; --surface-2: #192823; --ink: #e8f1ec; --muted: #8fa399;
-  --line: #25362f; --accent: #3fdc98; --accent-ink: #04200f; --accent-soft: #123127;
-  --warn: #f0b45c; --warn-soft: #3a2a12; --pl: 62%; --pt: #08140f;
-  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  --bg: #0b0d1c; --surface: #151834; --surface-2: #1d2142; --ink: #f1f3ff; --muted: #9aa1cc; --line: #2a2f58;
+  --accent: #7b93ff; --accent-ink: #0b0d1c; --accent-soft: #232a5e; --warn: #ffb36b; --warn-soft: #3a2812; --ok: #4ade80;
+  --pl: 64%; --ps: 90%; --pt: #0b0d1c; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html, body { height: 100%; }
-body {
-  background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.4;
-  padding-inline: 16px; -webkit-tap-highlight-color: transparent;
-}
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.4; padding-inline: 16px; -webkit-tap-highlight-color: transparent; }
 button { font: inherit; color: inherit; cursor: pointer; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
-#app { max-width: 560px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; padding-block: 16px 132px; }
+#app { max-width: 600px; margin: 0 auto; padding-block: 18px 150px; }
+section.blk { margin-top: 30px; scroll-margin-top: 12px; }
+.sh { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 0 12px; }
+h2 { font: 800 24px/1.1 var(--f-display); letter-spacing: -.02em; margin: 0; }
+.hint { color: var(--muted); font-size: 13px; }
 
 /* header */
-.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-.brand { min-width: 0; }
-.brand h1 { font: 800 26px/1.05 var(--f-display); letter-spacing: -.02em; margin: 0; }
-.brand p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.top h1 { font: 800 32px/1 var(--f-display); letter-spacing: -.03em; margin: 0; }
+.top p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
 .billpill { text-align: right; flex: none; }
-.billpill small { display: block; color: var(--muted); font: 500 11px var(--f-body); letter-spacing: .08em; text-transform: uppercase; }
-.billpill b { font: 500 20px var(--f-mono); font-variant-numeric: tabular-nums; }
-
-/* stage + transitions */
-#stage { flex: 1; }
-.step { animation: enter .45s cubic-bezier(.2,.8,.2,1) both; }
-.step.back { animation-name: enterBack; }
-@keyframes enter { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
-@keyframes enterBack { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
-h2 { font: 800 30px/1.05 var(--f-display); letter-spacing: -.02em; margin: 6px 0 4px; text-wrap: balance; }
-.lede { color: var(--muted); margin: 0 0 18px; }
+.billpill small { display: block; color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
+.billpill b { font: 500 22px var(--f-mono); font-variant-numeric: tabular-nums; }
 
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 16px; }
 .stack { display: flex; flex-direction: column; gap: 12px; }
 
 /* avatars */
-.av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none;
-  background: hsl(var(--h) 62% var(--pl)); color: var(--pt); font: 700 14px var(--f-body); }
-.av.lg { width: 44px; height: 44px; font-size: 18px; }
+.av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none; background: hsl(var(--h) var(--ps) var(--pl)); color: var(--pt); font: 700 14px var(--f-body); }
+.av.lg { width: 40px; height: 40px; font-size: 17px; }
 
-/* people step */
-.counter { display: flex; align-items: center; justify-content: center; gap: 22px; padding: 22px 16px; }
-.counter .num { font: 800 84px/1 var(--f-display); min-width: 1.2ch; text-align: center; font-variant-numeric: tabular-nums; }
-.round { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface-2); font: 500 32px/1 var(--f-body);
-  display: grid; place-items: center; transition: transform .15s, background .2s, border-color .2s; }
-.round:hover { border-color: var(--accent); }
-.round:active { transform: scale(.9); }
-.round:disabled { opacity: .35; cursor: default; }
+/* people */
+.pp { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.stepper { display: flex; align-items: center; gap: 12px; }
+.round { width: 46px; height: 46px; border-radius: 50%; border: none; background: var(--accent); color: var(--accent-ink); font: 700 26px/1 var(--f-body); display: grid; place-items: center; transition: transform .15s, opacity .2s; }
+.round:active { transform: scale(.88); }
+.round:disabled { opacity: .3; cursor: default; }
+.num { font: 800 46px/1 var(--f-display); min-width: 1.3ch; text-align: center; font-variant-numeric: tabular-nums; }
 .bump { animation: bump .3s cubic-bezier(.3,1.6,.5,1); }
 @keyframes bump { 0% { transform: scale(.8); } 100% { transform: scale(1); } }
-.quick { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
-.quick button { border: 1px solid var(--line); background: var(--surface-2); border-radius: 999px; padding: 6px 14px; font-size: 14px; color: var(--muted); }
-.quick button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
-.names { display: flex; flex-direction: column; gap: 8px; }
-.namerow { display: flex; align-items: center; gap: 12px; animation: pop .35s cubic-bezier(.3,1.5,.5,1) both; }
+.ppl { color: var(--muted); font-size: 14px; flex: 1; min-width: 120px; }
+.names { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 14px; }
+.namebox { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 14px; padding: 5px 8px 5px 5px; animation: pop .35s cubic-bezier(.3,1.5,.5,1) both; min-width: 0; }
+.namebox input { flex: 1; min-width: 0; font: 500 15px var(--f-body); background: transparent; color: var(--ink); border: none; outline: none; padding: 6px 2px; }
+.namebox:focus-within { box-shadow: 0 0 0 2px var(--accent); }
 @keyframes pop { from { opacity: 0; transform: scale(.9) translateY(6px); } to { opacity: 1; transform: none; } }
-.namerow input { flex: 1; min-width: 0; font: 500 17px var(--f-body); background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 11px 14px; }
-.namerow input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
 
 /* dishes */
-.progress { margin-bottom: 14px; }
+.progress { margin-bottom: 12px; }
 .progress .row { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 6px; gap: 8px; }
-.progress .row b { color: var(--ink); font-weight: 700; }
+.progress .row b { color: var(--ink); }
 .track { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
 .fill { height: 100%; width: 0; background: var(--accent); border-radius: 99px; transition: width .5s cubic-bezier(.2,.8,.2,1); }
-.dish { transition: border-color .25s, box-shadow .25s; }
-.dish.done { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
-.dhead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 12px; }
-.dname { font: 700 18px var(--f-display); min-width: 0; overflow-wrap: anywhere; }
-.qty { font: 500 12px var(--f-mono); color: var(--muted); background: var(--surface-2); border-radius: 6px; padding: 2px 6px; margin-left: 6px; vertical-align: 2px; }
-.dprice { font: 500 17px var(--f-mono); font-variant-numeric: tabular-nums; flex: none; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { display: flex; align-items: center; gap: 7px; padding: 5px 12px 5px 5px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface-2);
-  font-size: 14px; font-weight: 500; transition: transform .15s, background .2s, border-color .2s; max-width: 100%; }
-.chip span.t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 11ch; }
-.chip:active { transform: scale(.93); }
-.chip[aria-pressed="true"] { background: color-mix(in srgb, hsl(var(--h) 62% var(--pl)) 16%, var(--surface)); border-color: hsl(var(--h) 62% var(--pl)); animation: bump .3s cubic-bezier(.3,1.6,.5,1); }
-.chip.all { padding: 5px 14px; color: var(--muted); }
+.dish { padding: 14px; transition: border-color .25s; }
+.dish.done { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.dhead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.dname { font: 700 17px var(--f-display); min-width: 0; overflow-wrap: anywhere; }
+.qty { font: 500 12px var(--f-mono); color: var(--accent); background: var(--accent-soft); border-radius: 6px; padding: 2px 6px; margin-left: 6px; vertical-align: 2px; }
+.dprice { font: 500 16px var(--f-mono); font-variant-numeric: tabular-nums; flex: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.chip { display: flex; align-items: center; gap: 6px; padding: 4px 11px 4px 4px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface-2); font-size: 14px; font-weight: 500; transition: transform .15s, background .2s, border-color .2s; max-width: 100%; }
+.chip .av { width: 26px; height: 26px; font-size: 12px; }
+.chip .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 11ch; }
+.chip:active { transform: scale(.92); }
+.chip[aria-pressed="true"] { background: hsl(var(--h) var(--ps) var(--pl) / .16); border-color: hsl(var(--h) var(--ps) var(--pl)); animation: bump .3s cubic-bezier(.3,1.6,.5,1); }
+.chip.all { padding: 4px 14px; color: var(--muted); }
 .chip.all[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
-.split { margin-top: 12px; }
+.split { margin-top: 10px; }
 .bar { display: flex; height: 12px; border-radius: 99px; overflow: hidden; background: var(--line); gap: 2px; }
-.bar i { display: block; height: 100%; background: hsl(var(--h) 62% var(--pl)); transition: width .35s cubic-bezier(.2,.8,.2,1); min-width: 0; }
-.sline { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--muted); }
-.sline.warn { color: var(--warn); font-weight: 500; }
+.bar i { display: block; height: 100%; background: hsl(var(--h) var(--ps) var(--pl)); transition: width .35s cubic-bezier(.2,.8,.2,1); min-width: 0; }
+.sline { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; color: var(--muted); }
+.sline.warn { color: var(--warn); font-weight: 500; margin-top: 0; }
 .linkbtn { background: none; border: none; color: var(--accent); font-weight: 700; font-size: 13px; padding: 6px 2px; }
-.sliders { display: grid; gap: 14px; margin-top: 8px; padding-top: 14px; border-top: 1px dashed var(--line); animation: enter .3s both; }
-.srow .lab { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 14px; font-weight: 500; }
+.sliders { display: grid; gap: 12px; margin-top: 6px; padding-top: 12px; border-top: 1px dashed var(--line); animation: pop .3s both; }
+.srow .lab { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; font-size: 14px; font-weight: 500; }
 .srow .lab .pc { margin-left: auto; font: 500 15px var(--f-mono); font-variant-numeric: tabular-nums; }
 .srow .lab .am { font: 400 12px var(--f-mono); color: var(--muted); min-width: 6ch; text-align: right; }
 input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 34px; background: transparent; margin: 0; --c: var(--accent); }
@@ -132,119 +118,115 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px;
 input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--surface); border: 3px solid var(--c); }
 
 /* tip & tax */
-.tipnote { background: var(--warn-soft); color: var(--warn); border-radius: 12px; padding: 10px 14px; font-size: 14px; font-weight: 500; margin-bottom: 14px; }
-.presets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 12px 0; }
-.presets button { border: 1.5px solid var(--line); background: var(--surface-2); border-radius: 14px; padding: 12px 0; font: 700 16px var(--f-body); transition: transform .15s, background .2s, border-color .2s; }
+.big { font: 500 36px/1 var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.tiprow { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.tipnote { color: var(--muted); font-size: 13px; }
+.presets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.presets button { border: 1.5px solid var(--line); background: var(--surface-2); border-radius: 14px; padding: 11px 0; font: 700 15px var(--f-body); transition: transform .15s, background .2s, border-color .2s; }
 .presets button:active { transform: scale(.94); }
 .presets button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.big { font: 500 38px/1 var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
 .field { display: flex; align-items: center; gap: 10px; }
 .field label { color: var(--muted); font-size: 14px; flex: 1; }
-.money { display: flex; align-items: center; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 0 12px; width: 140px; }
+.money { display: flex; align-items: center; border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; padding: 0 12px; width: 140px; }
 .money:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .money span { color: var(--muted); font-family: var(--f-mono); }
-.money input { border: none; background: transparent; color: var(--ink); font: 500 18px var(--f-mono); padding: 11px 6px; width: 100%; min-width: 0; outline: none; text-align: right; }
-.switch { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; background: none; border: none; padding: 4px 0; }
+.money input { border: none; background: transparent; color: var(--ink); font: 500 18px var(--f-mono); padding: 10px 6px; width: 100%; min-width: 0; outline: none; text-align: right; }
+.switch { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; background: none; border: none; padding: 2px 0; }
 .switch .txt { flex: 1; min-width: 0; }
 .switch .txt b { display: block; font-weight: 700; }
 .switch .txt small { color: var(--muted); font-size: 13px; }
 .tg { width: 52px; height: 32px; border-radius: 99px; background: var(--line); position: relative; flex: none; transition: background .25s; }
-.tg::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,.3); transition: transform .3s cubic-bezier(.3,1.5,.5,1); }
+.tg::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); transition: transform .3s cubic-bezier(.3,1.5,.5,1); }
 .switch[aria-checked="true"] .tg { background: var(--accent); }
 .switch[aria-checked="true"] .tg::after { transform: translateX(20px); }
-.live { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
-.live div { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 12px; padding: 8px 10px; min-width: 0; }
-.live b { font: 500 15px var(--f-mono); font-variant-numeric: tabular-nums; }
-.live .nm { font-size: 12px; color: var(--muted); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sec { font: 700 12px var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
 
 /* totals */
-.pcard { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 14px; align-items: center; animation: pop .45s cubic-bezier(.3,1.4,.5,1) both; }
-.pcard .who { font: 700 18px var(--f-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pcard .owes { font: 500 30px var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
-.pcard .brk { grid-column: 1 / -1; display: flex; gap: 6px 14px; flex-wrap: wrap; font: 400 13px var(--f-mono); color: var(--muted); margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--line); font-variant-numeric: tabular-nums; }
-.check { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); padding: 4px 4px; flex-wrap: wrap; }
+.tgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.pcard { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: center; padding: 14px; border-top: 5px solid hsl(var(--h) var(--ps) var(--pl)); animation: pop .45s cubic-bezier(.3,1.4,.5,1) both; min-width: 0; }
+.pcard .who { font: 700 16px var(--f-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pcard .owes { grid-column: 1 / -1; font: 500 34px/1.1 var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; margin-top: 6px; }
+.pcard .brk { grid-column: 1 / -1; display: flex; gap: 4px 12px; flex-wrap: wrap; font: 400 12px var(--f-mono); color: var(--muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.check { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); padding: 3px 2px; flex-wrap: wrap; }
 .check b { font: 500 15px var(--f-mono); color: var(--ink); }
 .check.bad b { color: var(--warn); }
-.primary { width: 100%; border: none; border-radius: 16px; padding: 15px; background: var(--accent); color: var(--accent-ink); font: 700 16px var(--f-body); transition: transform .15s; }
-.primary:active { transform: scale(.97); }
-.ghost { width: 100%; border: 1.5px solid var(--line); border-radius: 16px; padding: 13px; background: transparent; font: 700 15px var(--f-body); }
+.check.good b { color: var(--ok); }
+.ghost { width: 100%; border: 1.5px solid var(--line); border-radius: 16px; padding: 13px; background: var(--surface); font: 700 15px var(--f-body); }
+.ghost:active { transform: scale(.98); }
 .copybox { white-space: pre-wrap; font: 400 13px var(--f-mono); background: var(--surface-2); border-radius: 12px; padding: 12px; margin-top: 10px; max-height: 220px; overflow: auto; user-select: all; }
 
-/* bottom nav */
-.nav { position: fixed; left: 0; right: 0; bottom: 0; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  border-top: 1px solid var(--line); padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 5; }
-.navin { max-width: 560px; margin: 0 auto; display: grid; gap: 10px; }
-.dots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.dots button { background: none; border: none; padding: 0; text-align: left; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-.dots i { display: block; height: 4px; border-radius: 9px; background: var(--line); margin-bottom: 5px; transition: background .3s; }
-.dots button.on { color: var(--ink); }
-.dots button.on i, .dots button.past i { background: var(--accent); }
-.btns { display: flex; gap: 10px; }
-.btns .ghost { width: auto; flex: 0 0 90px; }
+/* pinned live totals */
+.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgba(14,17,40,.1); padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px)); }
+.dockin { max-width: 600px; margin: 0 auto; padding-inline: 16px; }
+.dstat { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.dstat .left { color: var(--warn); }
+.dstat .left.ok { color: var(--ok); }
+.pills { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.pills::-webkit-scrollbar { display: none; }
+.pill { flex: none; display: flex; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 14px; padding: 6px 12px 6px 6px; }
+.pill .nm { display: block; font-size: 11px; color: var(--muted); max-width: 9ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pill b { font: 500 16px var(--f-mono); font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 </style>
 
 <div id="app">
   <header class="top">
-    <div class="brand"><h1>Split the Check</h1><p id="meta">The James · Babylon · Check #140 · 9/25</p></div>
-    <div class="billpill"><small>Bill total</small><b id="billtotal">$570.94</b></div>
+    <div><h1>Split the Check</h1><p>The James · Babylon · Check #140 · 9/25</p></div>
+    <div class="billpill"><small>Bill total</small><b id="billtotal">$0.00</b></div>
   </header>
-  <main id="stage" aria-live="polite"></main>
+
+  <section class="blk" id="sPeople"></section>
+  <section class="blk" id="sDishes"></section>
+  <section class="blk" id="sTip"></section>
+  <section class="blk" id="sTotals"></section>
 </div>
-<nav class="nav" aria-label="Steps"><div class="navin">
-  <div class="dots" id="dots"></div>
-  <div class="btns"><button class="ghost" id="back">Back</button><button class="primary" id="next">Continue</button></div>
-</div></nav>
+
+<div class="dock" aria-label="Live totals"><div class="dockin">
+  <div class="dstat"><span>Who owes</span><span class="left" id="dleft"></span></div>
+  <div class="pills" id="pills"></div>
+</div></div>
 
 <script>
 (function () {
   "use strict";
-  var HUES = [160, 12, 215, 42, 285, 335, 95, 190, 25, 250, 120, 310];
-  var STEPS = ["People", "Dishes", "Tip & tax", "Totals"];
-  // Items read from the receipt (prices in cents)
+  var HUES = [222, 8, 150, 38, 280, 335, 190, 95, 20, 250, 120, 310];
+  // Receipt lines, prices in cents
   var items = [
     ["Creamed Spinach", 1, 1500], ["Tomahawk", 1, 18500], ["Tanqueray", 1, 1700], ["Caviar Bump", 4, 11200],
     ["Tableside Martini", 2, 6600], ["Caesar", 1, 1900], ["Add Chicken", 1, 1200], ["Burger", 1, 2900],
     ["Weekly Pasta (special)", 1, 3600], ["Michelob Ultra Light", 1, 900], ["Save the Robots IPA", 1, 1000], ["Sticky Toffee Cake", 1, 1500]
   ].map(function (r, i) { return { id: i, name: r[0], qty: r[1], price: r[2], shares: {}, open: false }; });
 
-  var S = {
-    step: 0, dir: 1, n: 4,
-    names: ["Me", "Friend 1", "Friend 2", "Friend 3"],
-    taxCents: 4594, taxFollows: true, tipFollows: true,
-    tipMode: "amt", tipPct: 20, tipAmtCents: 12000
-  };
-  var shown = {}; // animated number memory
+  var S = { n: 4, names: ["Me", "Friend 1", "Friend 2", "Friend 3"], taxCents: 4594, taxFollows: true, tipFollows: true,
+    tipMode: "amt", tipPct: 20, tipAmtCents: 12000 };
+  var shown = {};
+  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
-  var stage = $("#stage");
 
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function money(c) { var s = Math.abs(c) < 0.5 ? 0 : c; return "$" + (s / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function nm(i) { return (S.names[i] || "").trim() || "Guest " + (i + 1); }
   function hue(i) { return HUES[i % HUES.length]; }
-  function av(i, cls) { return '<span class="av ' + (cls || "") + '" style="--h:' + hue(i) + '">' + esc(nm(i).charAt(0).toUpperCase()) + "</span>"; }
+  function av(i, cls) { return '<span class="av ' + (cls || "") + '" data-avp="' + i + '" style="--h:' + hue(i) + '">' + esc(nm(i).charAt(0).toUpperCase()) + "</span>"; }
   function subtotal() { return items.reduce(function (a, it) { return a + it.price; }, 0); }
   function tipCents() { return S.tipMode === "amt" ? S.tipAmtCents : Math.round(subtotal() * S.tipPct / 100); }
   function sharesOf(it) { return Object.keys(it.shares).map(Number); }
+  function parseMoney(v) { var n = parseFloat(String(v).replace(/[^0-9.]/g, "")); return isNaN(n) ? 0 : Math.round(n * 100); }
 
-  // largest-remainder integer split of `total` by weights
-  function lr(total, weights) {
+  function lr(total, weights) { // largest-remainder split of whole units
     var sum = weights.reduce(function (a, b) { return a + b; }, 0);
     if (!sum) { var e = weights.length; return weights.map(function (_, i) { return Math.floor(total / e) + (i < total % e ? 1 : 0); }); }
     var raw = weights.map(function (w) { return total * w / sum; });
     var out = raw.map(Math.floor), rem = total - out.reduce(function (a, b) { return a + b; }, 0);
-    raw.map(function (r, i) { return [r - Math.floor(r), i]; }).sort(function (a, b) { return b[0] - a[0]; })
-      .slice(0, rem).forEach(function (p) { out[p[1]]++; });
+    raw.map(function (r, i) { return [r - Math.floor(r), i]; }).sort(function (a, b) { return b[0] - a[0]; }).slice(0, rem).forEach(function (p) { out[p[1]]++; });
     return out;
   }
   function evenShares(ids) { var v = lr(100, ids.map(function () { return 1; })), o = {}; ids.forEach(function (id, i) { o[id] = v[i]; }); return o; }
 
   function compute() {
-    var sub = subtotal(), tip = tipCents(), tax = S.taxCents, n = S.n, food = [], i;
+    var sub = subtotal(), tip = tipCents(), tax = S.taxCents, n = S.n, food = [], i, assigned = 0;
     for (i = 0; i < n; i++) food.push(0);
-    var assigned = 0;
     items.forEach(function (it) {
       var tot = 0;
       sharesOf(it).forEach(function (p) { if (p < n) { food[p] += it.price * it.shares[p] / 100; tot += it.shares[p]; } });
@@ -254,67 +236,48 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
     var taxR = food.map(function (f) { return S.taxFollows ? tax * f / sub : tax / n; });
     var tipR = food.map(function (f) { return S.tipFollows ? tip * f / sub : tip / n; });
     var raw = food.map(function (f, k) { return f + taxR[k] + tipR[k]; });
-    var totals;
-    if (unassigned < 0.5) { // everything assigned: make cents add up exactly to the receipt total
-      totals = lr(sub + tax + tip, raw);
-    } else totals = raw.map(Math.round);
+    var totals = unassigned < 0.5 ? lr(sub + tax + tip, raw) : raw.map(Math.round); // exact to the cent once everything is assigned
     var taxO = taxR.map(Math.round), tipO = tipR.map(Math.round);
-    return { sub: sub, tip: tip, tax: tax, grand: sub + tax + tip, totals: totals, tax_: taxO, tip_: tipO,
+    return { sub: sub, tip: tip, tax: tax, grand: sub + tax + tip, totals: totals, taxO: taxO, tipO: tipO,
       food: totals.map(function (t, k) { return t - taxO[k] - tipO[k]; }), unassigned: unassigned,
       sum: totals.reduce(function (a, b) { return a + b; }, 0),
       doneCount: items.filter(function (it) { return sharesOf(it).length; }).length };
   }
 
-  /* ---------- animated numbers ---------- */
-  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   function tween(el, key, to) {
     if (!el) return;
-    var from = shown[key] == null ? 0 : shown[key];
-    shown[key] = to;
+    var from = shown[key] == null ? 0 : shown[key]; shown[key] = to;
     if (reduce || from === to) { el.textContent = money(to); return; }
-    var t0 = performance.now(), d = 520;
-    cancelAnimationFrame(el._raf);
-    (function f(t) {
-      var k = Math.min(1, (t - t0) / d), e = 1 - Math.pow(1 - k, 3);
-      el.textContent = money(from + (to - from) * e);
-      if (k < 1) el._raf = requestAnimationFrame(f); else el.textContent = money(to);
-    })(t0);
+    var t0 = performance.now(), d = 450; cancelAnimationFrame(el._raf);
+    (function f(t) { var k = Math.min(1, (t - t0) / d), e = 1 - Math.pow(1 - k, 3); el.textContent = money(from + (to - from) * e); if (k < 1) el._raf = requestAnimationFrame(f); else el.textContent = money(to); })(t0);
   }
 
-  /* ---------- step 0: people ---------- */
+  /* ---- people ---- */
   function renderPeople() {
-    var rows = "";
-    for (var i = 0; i < S.n; i++) rows += '<div class="namerow">' + av(i, "lg") + '<input id="name' + i + '" data-i="' + i + '" value="' + esc(S.names[i]) + '" maxlength="14" placeholder="Name" aria-label="Name for person ' + (i + 1) + '"></div>';
-    var q = [2, 3, 4, 5, 6, 8].map(function (v) { return '<button data-set="' + v + '" aria-pressed="' + (S.n === v) + '">' + v + "</button>"; }).join("");
-    return '<h2>Who\'s splitting?</h2><p class="lede">The receipt shows 4 guests. Change it if that\'s off.</p>' +
-      '<div class="card stack"><div class="counter"><button class="round" id="minus" aria-label="Fewer people"' + (S.n <= 1 ? " disabled" : "") + '>−</button>' +
-      '<div class="num" id="count" aria-live="polite">' + S.n + '</div><button class="round" id="plus" aria-label="More people"' + (S.n >= 12 ? " disabled" : "") + '>+</button></div>' +
-      '<div class="quick" id="quick">' + q + "</div></div>" +
-      '<p class="sec" style="margin:20px 0 10px">Names</p><div class="card names" id="names">' + rows + "</div>";
+    var boxes = "";
+    for (var i = 0; i < S.n; i++) boxes += '<label class="namebox">' + av(i) + '<input data-i="' + i + '" value="' + esc(S.names[i]) + '" maxlength="14" placeholder="Name" aria-label="Name for person ' + (i + 1) + '"></label>';
+    $("#sPeople").innerHTML = '<div class="sh"><h2>Who\'s splitting?</h2></div><div class="card"><div class="pp"><div class="stepper"><button class="round" id="minus" aria-label="Fewer people"' + (S.n <= 1 ? " disabled" : "") +
+      '>−</button><div class="num" id="count">' + S.n + '</div><button class="round" id="plus" aria-label="More people"' + (S.n >= 12 ? " disabled" : "") + '>+</button></div><div class="ppl">people<br>(receipt says 4 guests)</div></div><div class="names">' + boxes + "</div></div>";
   }
   function setCount(n) {
-    n = Math.max(1, Math.min(12, n));
-    if (n === S.n) return;
+    n = Math.max(1, Math.min(12, n)); if (n === S.n) return;
     while (S.names.length < n) S.names.push(S.names.length === 0 ? "Me" : "Friend " + S.names.length);
     S.n = n;
-    items.forEach(function (it) { // drop removed people, re-normalize
+    items.forEach(function (it) {
       var ids = sharesOf(it).filter(function (p) { return p < n; });
-      if (ids.length !== sharesOf(it).length) {
-        var w = ids.map(function (p) { return it.shares[p]; }), v = lr(100, w), o = {};
-        ids.forEach(function (p, k) { o[p] = v[k]; }); it.shares = ids.length ? o : {};
-      }
+      if (ids.length !== sharesOf(it).length) { var v = lr(100, ids.map(function (p) { return it.shares[p]; })), o = {}; ids.forEach(function (p, k) { o[p] = v[k]; }); it.shares = ids.length ? o : {}; }
     });
-    renderStage(true);
+    renderPeople(); renderDishes(); renderTotals(); paintAll();
+    var c = $("#count"); c && c.classList.add("bump");
   }
 
-  /* ---------- step 1: dishes ---------- */
+  /* ---- dishes ---- */
   function dishHTML(it) {
     var chips = "";
-    for (var p = 0; p < S.n; p++) chips += '<button class="chip" data-p="' + p + '" style="--h:' + hue(p) + '" aria-pressed="' + (it.shares[p] != null) + '">' + av(p) + '<span class="t">' + esc(nm(p)) + "</span></button>";
-    var all = sharesOf(it).length === S.n && S.n > 1;
-    chips += S.n > 1 ? '<button class="chip all" data-all="1" aria-pressed="' + all + '">Everyone</button>' : "";
-    return '<article class="card dish" id="dish' + it.id + '" data-id="' + it.id + '"><div class="dhead"><div class="dname">' + esc(it.name) +
-      (it.qty > 1 ? '<span class="qty">×' + it.qty + "</span>" : "") + '</div><div class="dprice">' + money(it.price) + '</div></div><div class="chips">' + chips + '</div><div class="split"></div></article>';
+    for (var p = 0; p < S.n; p++) chips += '<button class="chip" data-p="' + p + '" style="--h:' + hue(p) + '" aria-pressed="false">' + av(p) + '<span class="t">' + esc(nm(p)) + "</span></button>";
+    if (S.n > 1) chips += '<button class="chip all" data-all="1" aria-pressed="false">Everyone</button>';
+    return '<article class="card dish" id="dish' + it.id + '" data-id="' + it.id + '"><div class="dhead"><div class="dname">' + esc(it.name) + (it.qty > 1 ? '<span class="qty">×' + it.qty + "</span>" : "") +
+      '</div><div class="dprice">' + money(it.price) + '</div></div><div class="chips">' + chips + '</div><div class="split"></div></article>';
   }
   function splitHTML(it) {
     var ids = sharesOf(it).sort(function (a, b) { return a - b; });
@@ -323,8 +286,8 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
     if (ids.length === 1) return bar + '<div class="sline"><span>All ' + esc(nm(ids[0])) + "</span><span>" + money(it.price) + "</span></div>";
     var even = ids.every(function (p) { return Math.abs(it.shares[p] - 100 / ids.length) < 1; });
     var sl = it.open ? '<div class="sliders">' + ids.map(function (p) {
-      return '<div class="srow"><div class="lab">' + av(p) + "<span>" + esc(nm(p)) + '</span><span class="pc" data-pc="' + p + '">' + it.shares[p] + '%</span><span class="am" data-am="' + p + '">' + money(it.price * it.shares[p] / 100) + '</span></div>' +
-        '<input type="range" min="0" max="100" step="1" value="' + it.shares[p] + '" data-sl="' + p + '" style="--c:hsl(' + hue(p) + ' 62% var(--pl));--p:' + it.shares[p] + '%" aria-label="' + esc(nm(p)) + ' share of ' + esc(it.name) + '"></div>';
+      return '<div class="srow"><div class="lab">' + av(p) + "<span>" + esc(nm(p)) + '</span><span class="pc" data-pc="' + p + '">' + it.shares[p] + '%</span><span class="am" data-am="' + p + '">' + money(it.price * it.shares[p] / 100) + "</span></div>" +
+        '<input type="range" min="0" max="100" step="1" value="' + it.shares[p] + '" data-sl="' + p + '" style="--c:hsl(' + hue(p) + ' var(--ps) var(--pl));--p:' + it.shares[p] + '%" aria-label="' + esc(nm(p)) + ' share of ' + esc(it.name) + '"></div>';
     }).join("") + '<button class="linkbtn" data-even="1" style="justify-self:start">Reset to even split</button></div>' : "";
     return bar + '<div class="sline"><span>' + (even ? "Even split · " + Math.round(100 / ids.length) + "% each" : "Custom split") + '</span><button class="linkbtn" data-open="1">' + (it.open ? "Done" : "Adjust split") + "</button></div>" + sl;
   }
@@ -335,21 +298,15 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
     $$(".chip[data-p]", el).forEach(function (c) { c.setAttribute("aria-pressed", it.shares[+c.dataset.p] != null); });
     var all = $(".chip.all", el); if (all) all.setAttribute("aria-pressed", sharesOf(it).length === S.n);
   }
-  function paintProgress() {
-    var c = compute();
-    $("#pfill") && ($("#pfill").style.width = (c.doneCount / items.length * 100) + "%");
-    $("#pcount") && ($("#pcount").textContent = c.doneCount + " of " + items.length + " dishes assigned");
-    var left = $("#pleft"); if (left) left.textContent = c.unassigned >= 0.5 ? money(c.unassigned) + " left to assign" : "All assigned";
-  }
   function renderDishes() {
-    return '<h2>Who had what?</h2><p class="lede">Tap the people who had each dish. Shared dishes split evenly, or fine-tune with the sliders.</p>' +
+    $("#sDishes").innerHTML = '<div class="sh"><h2>Who had what?</h2><span class="hint">Tap names. Shared dishes split evenly.</span></div>' +
       '<div class="progress"><div class="row"><b id="pcount"></b><span id="pleft"></span></div><div class="track"><div class="fill" id="pfill"></div></div></div>' +
-      '<div class="stack" id="dishes">' + items.map(dishHTML).join("") + "</div>";
+      '<div class="stack">' + items.map(dishHTML).join("") + "</div>";
+    items.forEach(paintDish);
   }
   function setShare(it, p, v) {
-    var ids = sharesOf(it).filter(function (x) { return x !== p; });
-    v = Math.max(0, Math.min(100, Math.round(v)));
-    var w = ids.map(function (x) { return it.shares[x]; }), rest = 100 - v, vals = lr(rest, w.reduce(function (a, b) { return a + b; }, 0) ? w : w.map(function () { return 1; }));
+    var ids = sharesOf(it).filter(function (x) { return x !== p; }); v = Math.max(0, Math.min(100, Math.round(v)));
+    var w = ids.map(function (x) { return it.shares[x]; }), z = w.reduce(function (a, b) { return a + b; }, 0), vals = lr(100 - v, z ? w : w.map(function () { return 1; }));
     it.shares[p] = v; ids.forEach(function (x, k) { it.shares[x] = vals[k]; });
   }
   function syncSliders(it) {
@@ -364,122 +321,100 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
     });
   }
 
-  /* ---------- step 2: tip & tax ---------- */
+  /* ---- tip & tax ---- */
   function renderTip() {
     var pre = [0, 15, 18, 20, 25].map(function (v) { return '<button data-pct="' + v + '" aria-pressed="' + (S.tipMode === "pct" && S.tipPct === v) + '">' + (v ? v + "%" : "None") + "</button>"; }).join("");
-    var rate = (S.taxCents / subtotal() * 100).toFixed(2).replace(/\.?0+$/, "");
-    return '<h2>Tip and tax</h2><p class="lede">There\'s no tip on this receipt, so add one here.</p>' +
-      '<div class="tipnote">No tip line on the receipt. Your ' + money(S.tipMode === "amt" ? S.tipAmtCents : tipCents()) + ' tip is filled in. Percent buttons figure tip on the ' + money(subtotal()) + ' pre-tax subtotal.</div>' +
-      '<div class="card stack"><div><p class="sec">Tip</p><div class="big" id="tipbig">' + money(tipCents()) + '</div></div>' +
-      '<div class="presets" id="presets">' + pre + "</div>" +
-      '<div class="field"><label for="tipamt">Or enter an exact tip</label><div class="money"><span>$</span><input id="tipamt" inputmode="decimal" placeholder="0.00" value="' + (S.tipMode === "amt" ? (S.tipAmtCents / 100).toFixed(2) : "") + '"></div></div></div>' +
-      '<div class="card stack" style="margin-top:12px"><div class="field"><label for="taxamt">Tax on receipt <span id="taxrate" style="font-family:var(--f-mono)">(' + rate + '%)</span></label><div class="money"><span>$</span><input id="taxamt" inputmode="decimal" value="' + (S.taxCents / 100).toFixed(2) + '"></div></div></div>' +
-      '<div class="card stack" style="margin-top:12px"><button class="switch" role="switch" id="swTax" aria-checked="' + S.taxFollows + '"><span class="txt"><b>Tax follows what each person ate</b><small id="swTaxS"></small></span><span class="tg"></span></button>' +
-      '<button class="switch" role="switch" id="swTip" aria-checked="' + S.tipFollows + '"><span class="txt"><b>Tip follows what each person ate</b><small id="swTipS"></small></span><span class="tg"></span></button></div>' +
-      '<p class="sec" style="margin:20px 0 8px">Who owes right now</p><div class="live" id="live"></div>';
+    $("#sTip").innerHTML = '<div class="sh"><h2>Tip and tax</h2><span class="hint">No tip on the receipt</span></div>' +
+      '<div class="card stack"><div class="tiprow"><div><div class="hint" style="margin-bottom:4px">Tip</div><div class="big" id="tipbig"></div></div><div class="tipnote" id="tipnote"></div></div>' +
+      '<div class="presets" id="presets">' + pre + '</div>' +
+      '<div class="field"><label for="tipamt">Or enter an exact tip</label><div class="money"><span>$</span><input id="tipamt" inputmode="decimal" placeholder="0.00" value="' + (S.tipMode === "amt" ? (S.tipAmtCents / 100).toFixed(2) : "") + '"></div></div><hr>' +
+      '<div class="field"><label for="taxamt">Tax on receipt <span id="taxrate" style="font-family:var(--f-mono)"></span></label><div class="money"><span>$</span><input id="taxamt" inputmode="decimal" value="' + (S.taxCents / 100).toFixed(2) + '"></div></div><hr>' +
+      '<button class="switch" role="switch" id="swTax" aria-checked="' + S.taxFollows + '"><span class="txt"><b>Tax follows what each person ate</b><small id="swTaxS"></small></span><span class="tg"></span></button>' +
+      '<button class="switch" role="switch" id="swTip" aria-checked="' + S.tipFollows + '"><span class="txt"><b>Tip follows what each person ate</b><small id="swTipS"></small></span><span class="tg"></span></button></div>';
   }
   function paintTip() {
-    var c = compute(), t = $("#tipbig"); if (t) t.textContent = money(c.tip);
-    var a = $("#swTaxS"), b = $("#swTipS");
-    if (a) a.textContent = S.taxFollows ? "Bigger plates pay more tax. Turn off to split tax evenly." : "Tax is split evenly between everyone.";
-    if (b) b.textContent = S.tipFollows ? "Bigger plates pay more tip. Turn off to split tip evenly." : "Tip is split evenly between everyone.";
-    var l = $("#live"); if (l) l.innerHTML = c.totals.map(function (v, i) { return "<div>" + av(i) + '<span><span class="nm">' + esc(nm(i)) + "</span><b>" + money(v) + "</b></span></div>"; }).join("");
-    $("#billtotal").textContent = money(c.grand);
-    var r = $("#taxrate"); if (r) r.textContent = "(" + (S.taxCents / subtotal() * 100).toFixed(2).replace(/\.?0+$/, "") + "%)";
+    var c = compute();
+    $("#tipbig").textContent = money(c.tip);
+    $("#tipnote").textContent = S.tipMode === "amt" ? "That's " + (c.tip / c.sub * 100).toFixed(1) + "% of the " + money(c.sub) + " pre-tax subtotal" : "% is figured on the " + money(c.sub) + " pre-tax subtotal";
+    $("#swTaxS").textContent = S.taxFollows ? "Bigger plates pay more tax. Turn off to split evenly." : "Tax is split evenly between everyone.";
+    $("#swTipS").textContent = S.tipFollows ? "Bigger plates pay more tip. Turn off to split evenly." : "Tip is split evenly between everyone.";
+    $("#taxrate").textContent = "(" + (S.taxCents / c.sub * 100).toFixed(2).replace(/\.?0+$/, "") + "%)";
   }
-  function parseMoney(v) { var n = parseFloat(String(v).replace(/[^0-9.]/g, "")); return isNaN(n) ? 0 : Math.round(n * 100); }
 
-  /* ---------- step 3: totals ---------- */
+  /* ---- totals ---- */
+  function renderTotals() {
+    var cards = ""; for (var i = 0; i < S.n; i++)
+      cards += '<div class="card pcard" style="--h:' + hue(i) + ';animation-delay:' + (i * 60) + 'ms">' + av(i, "lg") + '<div class="who" data-who="' + i + '">' + esc(nm(i)) + '</div><div class="owes" data-own="' + i + '">$0.00</div><div class="brk" data-brk="' + i + '"></div></div>';
+    $("#sTotals").innerHTML = '<div class="sh"><h2>What everyone owes</h2></div><div class="tgrid">' + cards + '</div>' +
+      '<div class="card" style="margin-top:12px"><div class="check"><span>Food</span><b id="cFood"></b></div><div class="check"><span>Tax</span><b id="cTax"></b></div><div class="check"><span>Tip</span><b id="cTip"></b></div><div class="check" id="cRow"><span id="cLbl"></span><b id="cVal"></b></div></div>' +
+      '<div style="margin-top:12px"><button class="ghost" id="copy">Copy summary to text friends</button><div id="copyout"></div></div>';
+  }
   function summaryText(c) {
     var l = ["The James · Check #140", ""];
     c.totals.forEach(function (v, i) { l.push(nm(i) + ": " + money(v)); });
-    l.push("", "Total " + money(c.grand) + " (tax " + money(c.tax) + ", tip " + money(c.tip) + ")");
-    return l.join("\n");
+    l.push("", "Total " + money(c.grand) + " (tax " + money(c.tax) + ", tip " + money(c.tip) + ")"); return l.join("\n");
   }
-  function renderTotals() {
+
+  /* ---- paint everything that depends on the numbers ---- */
+  function paintAll() {
     var c = compute();
-    var cards = c.totals.map(function (v, i) {
-      return '<div class="card pcard" style="animation-delay:' + (i * 70) + 'ms">' + av(i, "lg") + '<div class="who">' + esc(nm(i)) + '</div><div class="owes" data-own="' + i + '">$0.00</div>' +
-        '<div class="brk"><span>Food ' + money(c.food[i]) + "</span><span>Tax " + money(c.tax_[i]) + "</span><span>Tip " + money(c.tip_[i]) + "</span></div></div>";
-    }).join("");
-    var warn = c.unassigned >= 0.5 ? '<div class="tipnote">' + money(c.unassigned) + " of food isn't assigned to anyone yet. Go back to Dishes to finish.</div>" : "";
+    $("#billtotal").textContent = money(c.grand);
+    $("#pfill").style.width = (c.doneCount / items.length * 100) + "%";
+    $("#pcount").textContent = c.doneCount + " of " + items.length + " dishes assigned";
+    $("#pleft").textContent = c.unassigned >= 0.5 ? money(c.unassigned) + " left to assign" : "All assigned";
+    if ($("#tipbig")) paintTip();
+    c.totals.forEach(function (v, i) {
+      tween($('[data-own="' + i + '"]'), "own" + i, v);
+      var b = $('[data-brk="' + i + '"]'); if (b) b.innerHTML = "<span>Food " + money(c.food[i]) + "</span><span>Tax " + money(c.taxO[i]) + "</span><span>Tip " + money(c.tipO[i]) + "</span>";
+    });
+    $("#cFood").textContent = money(c.sub); $("#cTax").textContent = money(c.tax); $("#cTip").textContent = money(c.tip);
     var ok = Math.abs(c.sum - c.grand) < 1;
-    return '<h2>Here\'s what everyone owes</h2><p class="lede">Based on the shares you set.</p>' + warn + '<div class="stack">' + cards + "</div>" +
-      '<div class="card" style="margin-top:12px"><div class="check"><span>Food</span><b>' + money(c.sub) + '</b></div><div class="check"><span>Tax</span><b>' + money(c.tax) + '</b></div><div class="check"><span>Tip</span><b>' + money(c.tip) + '</b></div>' +
-      '<div class="check' + (ok ? "" : " bad") + '"><span>' + (ok ? "Adds up to the bill" : "Short of the bill by") + "</span><b>" + (ok ? money(c.grand) : money(c.grand - c.sum)) + "</b></div></div>" +
-      '<div style="margin-top:12px"><button class="ghost" id="copy">Copy summary to text friends</button><div id="copyout"></div></div>';
-  }
-  function paintTotals() {
-    var c = compute();
-    c.totals.forEach(function (v, i) { tween($('[data-own="' + i + '"]'), "own" + i, v); });
+    $("#cRow").className = "check " + (ok ? "good" : "bad");
+    $("#cLbl").textContent = ok ? "Everyone adds up to the bill" : "Still unassigned";
+    $("#cVal").textContent = money(ok ? c.grand : c.grand - c.sum);
+    $("#pills").innerHTML = c.totals.map(function (v, i) { return '<div class="pill">' + av(i) + '<span><span class="nm">' + esc(nm(i)) + "</span><b>" + money(v) + "</b></span></div>"; }).join("");
+    var l = $("#dleft"); l.textContent = c.unassigned >= 0.5 ? money(c.unassigned) + " unassigned" : "All assigned ✓"; l.className = "left" + (c.unassigned >= 0.5 ? "" : " ok");
   }
 
-  /* ---------- shell ---------- */
-  function renderStage(same) {
-    var html = [renderPeople, renderDishes, renderTip, renderTotals][S.step]();
-    stage.innerHTML = '<section class="' + (same ? "" : "step" + (S.dir < 0 ? " back" : "")) + '">' + html + "</section>";
-    if (S.step === 1) { items.forEach(paintDish); paintProgress(); }
-    if (S.step === 2) paintTip();
-    if (S.step === 3) { shown = {}; paintTotals(); }
-    $("#dots").innerHTML = STEPS.map(function (s, i) { return '<button data-go="' + i + '" class="' + (i === S.step ? "on" : i < S.step ? "past" : "") + '" aria-label="Go to ' + s + '"><i></i>' + s + "</button>"; }).join("");
-    $("#back").style.visibility = S.step === 0 ? "hidden" : "visible";
-    $("#next").textContent = ["Continue to dishes", "Continue to tip & tax", "See totals", "Start over"][S.step];
-    if (!same) window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
-    $("#billtotal").textContent = money(compute().grand);
-  }
-  function go(i, quiet) { i = Math.max(0, Math.min(3, i)); S.dir = i >= S.step ? 1 : -1; S.step = i; renderStage(false); }
-
-  /* ---------- events ---------- */
+  /* ---- events ---- */
   document.addEventListener("click", function (e) {
     var t = e.target.closest("button"); if (!t) return;
-    if (t.dataset.go != null) return go(+t.dataset.go);
-    if (t.id === "next") { if (S.step === 3) { items.forEach(function (it) { it.shares = {}; it.open = false; }); S.step = 0; S.dir = -1; return renderStage(false); } return go(S.step + 1); }
-    if (t.id === "back") return go(S.step - 1);
-    if (S.step === 0) {
-      if (t.id === "plus") { setCount(S.n + 1); var c1 = $("#count"); c1 && c1.classList.add("bump"); }
-      if (t.id === "minus") { setCount(S.n - 1); var c2 = $("#count"); c2 && c2.classList.add("bump"); }
-      if (t.dataset.set) setCount(+t.dataset.set);
-      return;
-    }
-    if (S.step === 1) {
-      var card = t.closest(".dish"); if (!card) return;
+    if (t.id === "plus") return setCount(S.n + 1);
+    if (t.id === "minus") return setCount(S.n - 1);
+    var card = t.closest(".dish");
+    if (card) {
       var it = items[+card.dataset.id];
-      if (t.dataset.p != null) {
-        var p = +t.dataset.p, ids = sharesOf(it);
-        if (it.shares[p] != null) ids = ids.filter(function (x) { return x !== p; }); else ids.push(p);
-        it.shares = evenShares(ids.sort(function (a, b) { return a - b; }));
-      } else if (t.dataset.all) {
-        var every = []; for (var k = 0; k < S.n; k++) every.push(k);
-        it.shares = sharesOf(it).length === S.n ? {} : evenShares(every);
-      } else if (t.dataset.open) it.open = !it.open;
+      if (t.dataset.p != null) { var p = +t.dataset.p, ids = sharesOf(it); ids = it.shares[p] != null ? ids.filter(function (x) { return x !== p; }) : ids.concat(p); it.shares = evenShares(ids.sort(function (a, b) { return a - b; })); }
+      else if (t.dataset.all) { var every = []; for (var k = 0; k < S.n; k++) every.push(k); it.shares = sharesOf(it).length === S.n ? {} : evenShares(every); }
+      else if (t.dataset.open) it.open = !it.open;
       else if (t.dataset.even) it.shares = evenShares(sharesOf(it).sort(function (a, b) { return a - b; }));
       else return;
-      paintDish(it); paintProgress(); return;
+      paintDish(it); paintAll(); return;
     }
-    if (S.step === 2) {
-      if (t.dataset.pct != null) { S.tipMode = "pct"; S.tipPct = +t.dataset.pct; $("#tipamt").value = ""; $$("#presets button").forEach(function (b) { b.setAttribute("aria-pressed", b === t); }); paintTip(); }
-      if (t.id === "swTax") { S.taxFollows = !S.taxFollows; t.setAttribute("aria-checked", S.taxFollows); paintTip(); }
-      if (t.id === "swTip") { S.tipFollows = !S.tipFollows; t.setAttribute("aria-checked", S.tipFollows); paintTip(); }
-      return;
-    }
-    if (S.step === 3 && t.id === "copy") {
+    if (t.dataset.pct != null) { S.tipMode = "pct"; S.tipPct = +t.dataset.pct; $("#tipamt").value = ""; $$("#presets button").forEach(function (b) { b.setAttribute("aria-pressed", b === t); }); return paintAll(); }
+    if (t.id === "swTax") { S.taxFollows = !S.taxFollows; t.setAttribute("aria-checked", S.taxFollows); return paintAll(); }
+    if (t.id === "swTip") { S.tipFollows = !S.tipFollows; t.setAttribute("aria-checked", S.tipFollows); return paintAll(); }
+    if (t.id === "copy") {
       var txt = summaryText(compute()), out = $("#copyout");
-      function fallback() { out.innerHTML = '<div class="copybox">' + esc(txt) + "</div>"; }
-      try { navigator.clipboard.writeText(txt).then(function () { t.textContent = "Copied!"; setTimeout(function () { t.textContent = "Copy summary to text friends"; }, 1800); fallback(); }, fallback); } catch (err) { fallback(); }
+      var show = function () { out.innerHTML = '<div class="copybox">' + esc(txt) + "</div>"; };
+      try { navigator.clipboard.writeText(txt).then(function () { t.textContent = "Copied!"; setTimeout(function () { t.textContent = "Copy summary to text friends"; }, 1800); show(); }, show); } catch (err) { show(); }
     }
   });
   document.addEventListener("input", function (e) {
     var t = e.target;
-    if (S.step === 0 && t.dataset.i != null) { S.names[+t.dataset.i] = t.value; var a = t.parentNode.querySelector(".av"); if (a) a.textContent = (t.value.trim() || "G").charAt(0).toUpperCase(); return; }
-    if (S.step === 1 && t.dataset.sl != null) {
-      var it = items[+t.closest(".dish").dataset.id]; setShare(it, +t.dataset.sl, +t.value); syncSliders(it); paintProgress(); return;
+    if (t.dataset.i != null) { // rename: update labels in place so typing keeps focus
+      var i = +t.dataset.i; S.names[i] = t.value;
+      var ch = (t.value.trim() || "G").charAt(0).toUpperCase();
+      $$('[data-avp="' + i + '"]').forEach(function (a) { a.textContent = ch; });
+      $$("#sDishes .chip[data-p='" + i + "'] .t").forEach(function (a) { a.textContent = nm(i); });
+      $$('[data-who="' + i + '"]').forEach(function (a) { a.textContent = nm(i); });
+      items.forEach(paintDish); paintAll(); return;
     }
-    if (S.step === 2) {
-      if (t.id === "tipamt") { S.tipMode = "amt"; S.tipAmtCents = parseMoney(t.value); $$("#presets button").forEach(function (b) { b.setAttribute("aria-pressed", "false"); }); paintTip(); }
-      if (t.id === "taxamt") { S.taxCents = parseMoney(t.value); paintTip(); $("#billtotal").textContent = money(compute().grand); }
-    }
+    if (t.dataset.sl != null) { var it = items[+t.closest(".dish").dataset.id]; setShare(it, +t.dataset.sl, +t.value); syncSliders(it); paintAll(); return; }
+    if (t.id === "tipamt") { S.tipMode = "amt"; S.tipAmtCents = parseMoney(t.value); $$("#presets button").forEach(function (b) { b.setAttribute("aria-pressed", "false"); }); paintAll(); }
+    if (t.id === "taxamt") { S.taxCents = parseMoney(t.value); paintAll(); }
   });
-  window.addEventListener("beforeunload", function () {});
-  renderStage(true);
+
+  renderPeople(); renderDishes(); renderTip(); renderTotals(); paintAll();
 })();
 </script>
