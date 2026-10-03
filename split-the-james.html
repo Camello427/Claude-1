@@ -139,23 +139,26 @@ h2 { font: 800 25px/1.1 var(--f-display); letter-spacing: -.02em; margin: 0; tex
 .dish { padding: 14px; transition: border-color .25s, box-shadow .3s; }
 .dish.done { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
 .dish.flash { box-shadow: 0 0 0 4px var(--warn); }
-.dhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+.dhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.dmeta { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 2px 0 12px; min-height: 32px; }
+.dsub { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; color: var(--muted); min-width: 0; }
+.dicons { display: flex; gap: 6px; flex: none; }
 .dname { font: 700 18px var(--f-display); min-width: 0; overflow-wrap: anywhere; }
-.qty { font: 500 12px var(--f-mono); color: var(--accent); background: var(--accent-soft); border-radius: 6px; padding: 2px 6px; margin-left: 6px; vertical-align: 2px; }
-.ptag { display: inline-block; font: 700 11px var(--f-body); color: var(--ok); background: var(--ok-soft); border-radius: 6px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
-.dright { display: flex; align-items: center; gap: 6px; flex: none; }
-.dprice { font: 500 17px var(--f-mono); font-variant-numeric: tabular-nums; margin-right: 4px; }
+.qty { font: 500 13px var(--f-mono); color: var(--accent); background: var(--accent-soft); border-radius: 6px; padding: 2px 7px; }
+.ptag { font: 700 12px var(--f-body); color: var(--ok); background: var(--ok-soft); border-radius: 6px; padding: 3px 8px; }
+.dprice { font: 500 19px var(--f-mono); font-variant-numeric: tabular-nums; flex: none; }
 .icon { flex: none; width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--surface-2); color: var(--muted); display: grid; place-items: center; }
 .icon svg { width: 16px; height: 16px; }
 .icon:active { transform: scale(.88); }
 .split { margin-top: 10px; }
 .bar { display: flex; height: 14px; border-radius: 99px; overflow: hidden; background: var(--line); gap: 2px; }
 .bar i { display: block; height: 100%; background: hsl(var(--h) var(--ps) var(--pl)); transition: width .35s cubic-bezier(.2,.8,.2,1); min-width: 0; }
-.amts { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font-size: 14px; }
-.amts span { display: inline-flex; align-items: center; gap: 6px; }
-.amts b { font: 500 14px var(--f-mono); }
-.amts small { color: var(--muted); font-size: 12px; }
-.sline { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 4px; font-size: 14px; color: var(--muted); }
+.tbl { display: grid; grid-template-columns: 1fr auto auto; column-gap: 18px; row-gap: 8px; margin-top: 12px; align-items: center; }
+.tbl .who { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 16px; }
+.tbl .who span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tbl .pc { font: 400 14px var(--f-mono); color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.tbl .am { font: 500 16px var(--f-mono); text-align: right; font-variant-numeric: tabular-nums; }
+.sline { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; font-size: 14px; color: var(--muted); }
 .sline.warn { color: var(--warn); font-weight: 700; margin-top: 0; }
 .sliders { display: grid; gap: 12px; margin-top: 6px; padding-top: 12px; border-top: 1px dashed var(--line); animation: pop .3s both; }
 .srow .lab { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; font-size: 15px; font-weight: 500; }
@@ -533,26 +536,27 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     var chips = "";
     for (var p = 0; p < S.n; p++) chips += '<button class="chip" data-p="' + p + '" style="--h:' + hue(p) + '" aria-pressed="false">' + av(p) + '<span class="t">' + esc(nm(p)) + "</span></button>";
     if (S.n > 1) chips += '<button class="chip all" data-all="1" aria-pressed="false">Everyone</button>';
-    return '<article class="card dish" id="dish' + it.id + '" data-id="' + it.id + '"><div class="dhead"><div class="dname">' + esc(it.name) + (it.qty > 1 ? '<span class="qty">×' + it.qty + "</span>" : "") + '<span class="ptag" hidden></span></div>' +
-      '<div class="dright"><div class="dprice">' + money(it.price) + '</div><button class="icon" data-edit="1" aria-label="Change ' + esc(it.name) + '">' + ICON.edit + '</button><button class="icon" data-del="1" aria-label="Remove ' + esc(it.name) + '">' + ICON.del + "</button></div></div>" +
+    return '<article class="card dish" id="dish' + it.id + '" data-id="' + it.id + '"><div class="dhead"><div class="dname">' + esc(it.name) + '</div><div class="dprice">' + money(it.price) + "</div></div>" +
+      '<div class="dmeta"><span class="dsub">' + (it.qty > 1 ? '<span class="qty">×' + it.qty + "</span>" : "") + '<span class="ptag" hidden></span></span>' +
+      '<span class="dicons"><button class="icon" data-edit="1" aria-label="Change ' + esc(it.name) + '">' + ICON.edit + '</button><button class="icon" data-del="1" aria-label="Remove ' + esc(it.name) + '">' + ICON.del + "</button></span></div>" +
       '<div class="chips">' + chips + '</div><div class="split"></div></article>';
   }
   function amtsHTML(it, sp) {
     var ids = sharesOf(it);
-    return ids.map(function (p) { return "<span>" + dot(p) + esc(nm(p)) + " <b>" + money(sp[p]) + "</b>" + (ids.length > 1 ? "<small>" + it.shares[p] + "%</small>" : "") + "</span>"; }).join("");
+    return ids.map(function (p) { return '<span class="who">' + dot(p) + "<span>" + esc(nm(p)) + '</span></span><span class="pc">' + (ids.length > 1 ? it.shares[p] + "%" : "") + '</span><span class="am">' + money(sp[p]) + "</span>"; }).join("");
   }
   function splitHTML(it) {
     var ids = sharesOf(it);
     if (!ids.length) return '<div class="sline warn"><span>Who had this? Tap a name.</span></div>';
     var sp = itemSplit(it);
     var bar = '<div class="bar">' + ids.map(function (p) { return '<i data-bp="' + p + '" style="--h:' + hue(p) + ';width:' + it.shares[p] + '%"></i>'; }).join("") + "</div>";
-    var amts = '<div class="amts">' + amtsHTML(it, sp) + "</div>";
+    var amts = '<div class="tbl">' + amtsHTML(it, sp) + "</div>";
     if (ids.length === 1) return bar + amts;
     var sl = it.open ? '<div class="sliders">' + ids.map(function (p) {
       return '<div class="srow"><div class="lab">' + av(p) + "<span>" + esc(nm(p)) + '</span><span class="pc" data-pc="' + p + '">' + it.shares[p] + '%</span><span class="am" data-am="' + p + '">' + money(sp[p]) + "</span></div>" +
         '<input type="range" min="0" max="100" step="1" value="' + it.shares[p] + '" data-sl="' + p + '" style="--c:hsl(' + hue(p) + ' var(--ps) var(--pl));--p:' + it.shares[p] + '%" aria-label="' + esc(nm(p)) + ' share of ' + esc(it.name) + '"></div>';
     }).join("") + '<button class="linkbtn" data-even="1" style="justify-self:start">Make it even again</button></div>' : "";
-    return bar + amts + '<div class="sline"><span></span><button class="linkbtn" data-open="1">' + (it.open ? "Done" : "Change how it's split") + "</button></div>" + sl;
+    return bar + (it.open ? "" : amts) + '<div class="sline"><button class="linkbtn" data-open="1">' + (it.open ? "Done changing" : "Change how it's split") + "</button></div>" + sl;
   }
   function paintDish(it) {
     var el = $("#dish" + it.id); if (!el || it._edit) return;
@@ -578,7 +582,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       if (am) am.textContent = money(sp[p]);
       if (b) b.style.width = it.shares[p] + "%";
     });
-    var amts = $(".amts", el); if (amts) amts.innerHTML = amtsHTML(it, sp);
+    var amts = $(".tbl", el); if (amts) amts.innerHTML = amtsHTML(it, sp);
   }
   function addItem() {
     var msg = $("#addMsg"), price = parseMoney($("#addPrice").value), qty = Math.max(1, Math.min(99, parseInt($("#addQty").value, 10) || 1));
@@ -730,8 +734,8 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     var c = compute(), b = c.bal[i], back = b < 0, rows = "";
     items.forEach(function (it) {
       var sp = itemSplit(it); if (!sp[i]) return;
-      var others = sharesOf(it).filter(function (p) { return p !== i; }).map(function (p) { return esc(nm(p)) + " " + money(sp[p]); }).join(" · ");
-      rows += '<div class="line"><span>' + esc(it.name) + (it.qty > 1 ? " ×" + it.qty : "") + "<small>" + it.shares[i] + "% of " + money(it.price) + (others ? " · " + others : "") + "</small></span><b>" + money(sp[i]) + "</b></div>";
+      var shared = sharesOf(it).length > 1;
+      rows += '<div class="line"><span>' + esc(it.name) + (it.qty > 1 ? " ×" + it.qty : "") + "<small>" + (shared ? it.shares[i] + "% of " + money(it.price) + ", shared with " + sharesOf(it).filter(function (p) { return p !== i; }).map(function (p) { return esc(nm(p)); }).join(" and ") : "all theirs") + "</small></span><b>" + money(sp[i]) + "</b></div>";
     });
     var xs = c.xfers.filter(function (x) { return x.amt >= 1 && (x.from === i || x.to === i); }).map(function (x) {
       return '<div class="line"><span>' + (x.from === i ? "Pay " + esc(nm(x.to)) : esc(nm(x.from)) + " pays you") + "</span><b>" + money(shownAmt(x.amt)) + "</b></div>";
@@ -751,8 +755,10 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   /* ================= text export ================= */
   function itemLines(it) {
     var sp = itemSplit(it), ids = sharesOf(it);
-    var who = ids.length ? ids.map(function (p) { return nm(p) + " " + money(sp[p]) + (ids.length > 1 ? " (" + it.shares[p] + "%)" : ""); }).join(" · ") : "not assigned yet";
-    return [it.name + (it.qty > 1 ? " ×" + it.qty : "") + ": " + money(it.price) + (it.paidBy != null ? " (paid by " + nm(it.paidBy) + ")" : ""), "   " + who];
+    var l = [it.name + (it.qty > 1 ? " ×" + it.qty : "") + " — " + money(it.price) + (it.paidBy != null ? " (paid by " + nm(it.paidBy) + ")" : "")];
+    if (!ids.length) l.push("   not assigned yet");
+    ids.forEach(function (p) { l.push("   " + nm(p) + ": " + money(sp[p]) + (ids.length > 1 ? " (" + it.shares[p] + "%)" : "")); });
+    return l;
   }
   function header(c) {
     var l = [billHead(false), "Whole bill " + money(c.grand) + " = food " + money(c.sub) + " + tax " + money(c.tax) + " + tip " + money(c.tip)];
@@ -769,7 +775,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   }
   function summaryText(c) {
     var l = header(c).concat(["", "WHO PAYS WHO" + (S.roundUp ? " (rounded up)" : "")], xferLines(c), ["", "EVERY ITEM AND WHO OWES WHAT"]);
-    items.forEach(function (it) { l = l.concat(itemLines(it)); });
+    items.forEach(function (it) { l = l.concat(itemLines(it), [""]); });
     l.push("", "EACH PERSON");
     c.share.forEach(function (s, i) {
       var b = c.bal[i];
@@ -783,8 +789,8 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     l = l.concat(xferLines(c, i), ["", "What " + nm(i) + " had:"]);
     items.forEach(function (it) {
       var sp = itemSplit(it); if (!sp[i]) return;
-      var others = sharesOf(it).filter(function (p) { return p !== i; }).map(function (p) { return nm(p) + " " + money(sp[p]); });
-      l.push("  • " + it.name + (it.qty > 1 ? " ×" + it.qty : "") + " " + money(it.price) + ": " + nm(i) + " " + money(sp[i]) + " (" + it.shares[i] + "%)" + (others.length ? " · " + others.join(" · ") : ""));
+      var ids = sharesOf(it);
+      l.push("  • " + it.name + (it.qty > 1 ? " ×" + it.qty : "") + ": " + money(sp[i]) + (ids.length > 1 ? " (" + it.shares[i] + "% of " + money(it.price) + ")" : ""));
     });
     l.push("  Food " + money(c.food[i]) + " + tax " + money(c.taxO[i]) + " + tip " + money(c.tipO[i]) + " = " + money(c.share[i]));
     if (c.paid[i]) l.push("  Already paid -" + money(c.paid[i]));
@@ -812,15 +818,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     var col = function (i) { return "hsl(" + hue(i) + " 68% 47%)"; };
     var meas = document.createElement("canvas").getContext("2d");
     var rows = items.filter(function (it) { return sharesOf(it).length && (who === "all" || itemSplit(it)[who] > 0); });
-    rows.forEach(function (it) { // legend wraps onto extra lines
-      meas.font = "600 26px " + SANS; var lines = [[]], x = 0, sp = itemSplit(it), ids = sharesOf(it);
-      ids.forEach(function (p) {
-        var label = nm(p) + " " + money(sp[p]) + (ids.length > 1 ? " · " + it.shares[p] + "%" : ""), w = 30 + meas.measureText(label).width + 30;
-        if (x + w > IW - 56 && lines[lines.length - 1].length) { lines.push([]); x = 0; }
-        lines[lines.length - 1].push({ p: p, label: label, w: w }); x += w;
-      });
-      it._lg = lines; it._bo = who === "all" && it.paidBy == null ? 74 : 112; it._h = it._bo + 66 + (lines.length - 1) * 40 + 30;
-    });
+    rows.forEach(function (it) { it._bo = who === "all" && it.paidBy == null ? 74 : 112; it._h = it._bo + 52 + sharesOf(it).length * 44 + 16; });
     var xs = c.xfers.filter(function (x) { return x.amt >= 1 && (who === "all" || x.from === who || x.to === who); });
     var HEAD = 330, GAP = 20, rowsH = rows.length ? rows.reduce(function (a, it) { return a + it._h + GAP; }, 0) : 140;
     var xH = 90 + Math.max(1, xs.length) * 74;
@@ -854,15 +852,20 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       card(y, it._h); var sp = itemSplit(it);
       text(fit(it.name + (it.qty > 1 ? " ×" + it.qty : ""), "700 36px " + SANS, IW - 330), P + 28, y + 52, "700 36px " + SANS, INK);
       text(who === "all" ? money(it.price) : money(sp[who]), P + IW - 28, y + 52, "500 36px " + MONO, INK, "right");
-      var subl = (who !== "all" ? it.shares[who] + "% of " + money(it.price) : "") + (it.paidBy != null ? (who !== "all" ? " · " : "") + "paid by " + nm(it.paidBy) : "");
+      var subl = (who !== "all" ? "their part of " + money(it.price) : "") + (it.paidBy != null ? (who !== "all" ? " · " : "") + "paid by " + nm(it.paidBy) : "");
       if (subl) text(fit(subl, "400 26px " + MONO, IW - 56), P + 28, y + 92, "400 26px " + MONO, it.paidBy != null ? OK : MUTED);
       var bx = P + 28, bw = IW - 56, by = y + it._bo, ids = sharesOf(it), cx = bx;
       g.save(); rr(bx, by, bw, 30, 15); g.clip(); g.fillStyle = LINE; g.fillRect(bx, by, bw, 30);
       ids.forEach(function (p, k) { var w = bw * it.shares[p] / 100; g.fillStyle = col(p); g.fillRect(cx, by, w - (k === ids.length - 1 ? 0 : 3), 30); cx += w; });
       g.restore();
-      it._lg.forEach(function (line, li) {
-        var lx = bx, ly = y + it._bo + 66 + li * 40;
-        line.forEach(function (m) { circ(lx + 11, ly - 9, 11, col(m.p)); text(m.label, lx + 30, ly, "600 26px " + SANS, who !== "all" && m.p === who ? INK : MUTED); lx += m.w; });
+      var ry = y + it._bo + 74;
+      ids.forEach(function (p) {
+        var me = who !== "all" && p === who, f = (me ? "700 " : "500 ") + "30px ";
+        circ(bx + 12, ry - 10, 12, col(p));
+        text(fit(nm(p), f + SANS, bw - 330), bx + 36, ry, f + SANS, me || who === "all" ? INK : MUTED);
+        if (ids.length > 1) text(it.shares[p] + "%", bx + bw - 190, ry, "400 28px " + MONO, MUTED, "right");
+        text(money(sp[p]), bx + bw, ry, f + MONO, me || who === "all" ? INK : MUTED, "right");
+        ry += 44;
       });
       y += it._h + GAP;
     });
