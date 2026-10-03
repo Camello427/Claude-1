@@ -224,6 +224,13 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
 .xfer .words b { font: 500 30px var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
 .xfer .venmo { grid-column: 1 / -1; font-size: 14px; }
 .xfer .venmo a { color: var(--accent); font-weight: 700; }
+.endrow { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px dashed var(--line); }
+.endrow .nm { display: block; font: 700 17px var(--f-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.endrow .sub { display: block; font-size: 13px; color: var(--muted); }
+.endrow b { font: 500 22px var(--f-mono); font-variant-numeric: tabular-nums; }
+.endtotal { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding-top: 12px; }
+.endtotal span { font-weight: 700; }
+.endtotal b { font: 500 22px var(--f-mono); }
 .allsquare { text-align: center; padding: 18px; font: 700 18px var(--f-display); color: var(--ok); }
 .person { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); }
 .person:active { transform: scale(.98); }
@@ -442,6 +449,22 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     return out;
   }
   function shownAmt(a) { return S.roundUp ? Math.ceil(a / 100) * 100 : a; }
+  function endTotals(c) {
+    var e = c.paid.slice();
+    c.xfers.forEach(function (x) { if (x.amt < 1) return; var a = shownAmt(x.amt); if (typeof x.from === "number") e[x.from] += a; if (typeof x.to === "number") e[x.to] -= a; });
+    return e;
+  }
+  function endNote(paid, net) {
+    var bits = [];
+    if (paid) bits.push("paid " + money(paid) + " at the table");
+    if (Math.abs(net) >= 1) bits.push(net > 0 ? "then pays " + money(net) : "then gets " + money(-net) + " back");
+    return bits.length ? bits.join(", ") : "nothing paid yet";
+  }
+  function endCardHTML(title, rows, total, totalLabel) {
+    return '<div class="card"><p class="q" style="margin:0 0 2px">' + title + '</p><p class="hint" style="margin:0 0 4px">After everyone pays who they owe, this is what each person spent.</p>' +
+      rows.map(function (r) { return '<div class="endrow">' + r.av + '<span style="min-width:0"><span class="nm">' + esc(r.name) + '</span><span class="sub">' + esc(r.note) + "</span></span><b>" + money(r.end) + "</b></div>"; }).join("") +
+      '<div class="endtotal"><span>' + totalLabel + "</span><b>" + money(total) + "</b></div></div>";
+  }
 
   /* ================= all bills together ================= */
   function inBill(i, fn) { var oc = cur, os = S, oi = items; cur = i; S = bills[i].S; items = bills[i].items; try { return fn(); } finally { cur = oc; S = os; items = oi; } }
@@ -455,8 +478,8 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       list.push({ title: billHead(false), grand: c.grand, payer: S.checkPayer === -1 ? null : nm(S.checkPayer), all: c.all, unassigned: c.unassigned });
       c.bal.forEach(function (v, k) {
         var key = nm(k).trim().toLowerCase();
-        if (!(key in map)) { map[key] = { name: nm(k), bal: 0, share: 0, h: HUES[order.length % HUES.length], venmo: "" }; order.push(key); }
-        map[key].bal += v; map[key].share += c.share[k]; if (!map[key].venmo && S.venmo[k]) map[key].venmo = S.venmo[k];
+        if (!(key in map)) { map[key] = { name: nm(k), bal: 0, share: 0, paid: 0, h: HUES[order.length % HUES.length], venmo: "" }; order.push(key); }
+        map[key].bal += v; map[key].share += c.share[k]; map[key].paid += c.paid[k]; if (!map[key].venmo && S.venmo[k]) map[key].venmo = S.venmo[k];
       });
       if (S.checkPayer === -1) server += c.remaining;
     }); });
@@ -473,7 +496,9 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       if (debt[di].amt <= 0) di++;
       if (cred[ci].amt <= 0) ci++;
     }
-    return { bills: list, people: people, xfers: xfers, ready: list.every(function (b) { return b.all; }) };
+    people.forEach(function (p) { p.end = p.paid; });
+    xfers.forEach(function (x) { var a = shownAmt(x.amt); if (!x.from.server) x.from.end += a; if (!x.to.server) x.to.end -= a; });
+    return { bills: list, people: people, xfers: xfers, ready: list.every(function (b) { return b.all; }), total: list.reduce(function (a, b) { return a + b.grand; }, 0) };
   }
   function comboVenmo(to, amt) {
     if (!to.venmo) return "";
@@ -487,6 +512,9 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     cb.xfers.forEach(function (x) { var a = shownAmt(x.amt), link = x.to.server ? "" : comboVenmo(x.to, a); l.push("  • " + x.from.name + " pays " + x.to.name + " " + money(a)); if (link) l.push("    Venmo: " + link); });
     l.push("", "EACH PERSON (all bills)");
     cb.people.forEach(function (p) { l.push("  " + p.name + ": share " + money(p.share) + " → " + (Math.abs(p.bal) < 1 ? "all square" : p.bal < 0 ? "gets back " + money(-p.bal) : "pays " + money(p.bal))); });
+    l.push("", "IN THE END, EACH PERSON PAID (all bills)");
+    cb.people.forEach(function (p) { l.push("  " + p.name + ": " + money(p.end)); });
+    l.push("  Total: " + money(cb.people.reduce(function (a, p) { return a + p.end; }, 0)));
     return l.join("\n");
   }
   function comboAv(p) { return '<span class="av lg" style="--h:' + p.h + (p.server ? ';background:var(--surface-2);color:var(--ink)' : "") + '">' + (p.server ? "$" : esc(p.name.charAt(0).toUpperCase())) + "</span>"; }
@@ -504,6 +532,10 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
           '<div class="words"><span><strong>' + esc(x.from.name) + "</strong> pays <strong>" + esc(x.to.name) + "</strong></span><b>" + money(a) + "</b></div>" +
           (link ? '<div class="venmo"><a href="' + esc(link) + '" target="_blank" rel="noopener">Pay ' + esc(x.to.name) + " on Venmo</a></div>" : "") + "</div>";
       }).join("") : '<div class="card allsquare">Across all bills, everyone is all square.</div>') + "</div>" +
+      '<div style="margin-top:12px">' + endCardHTML("In the end, across all bills", cb.people.map(function (pp) {
+        var out = 0, inn = 0; cb.xfers.forEach(function (x) { var a = shownAmt(x.amt); if (x.from === pp) out += a; if (x.to === pp) inn += a; });
+        return { av: comboAv(pp), name: pp.name, note: endNote(pp.paid, out - inn), end: pp.end };
+      }), cb.people.reduce(function (a, pp) { return a + pp.end; }, 0), "Total for all bills") + "</div>" +
       '<button class="ghost" id="copyCombo" style="margin-top:12px">Copy all bills together</button>';
   }
 
@@ -766,6 +798,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       '<div id="xferWarn"></div><div class="stack" id="xfers"></div>' +
       '<button class="switch" role="switch" id="swRound" aria-checked="' + S.roundUp + '" style="margin-top:12px"><span class="txt"><b>Round up to whole dollars</b><small>Easier to pay. The person being paid gets a few cents extra.</small></span><span class="tg"></span></button>' +
       '<p class="q" style="margin:22px 0 10px">Everyone\'s total <span class="hint" style="font-weight:400">· tap a name to see their receipt</span></p><div class="stack" id="people"></div>' +
+      '<div id="endCard" style="margin-top:12px"></div>' +
       '<div class="card" style="margin-top:12px"><div class="check"><span>Food</span><b id="cFood"></b></div><div class="check"><span>Tax</span><b id="cTax"></b></div><div class="check"><span>Tip</span><b id="cTip"></b></div>' +
         '<div class="check"><span style="color:var(--ink);font-weight:700">Whole bill</span><b id="cGrand"></b></div><div class="check" id="cPaidRow" hidden><span>Paid separately</span><b id="cPaid"></b></div></div>' +
       '<div id="combo" style="margin-top:16px"></div>' +
@@ -792,6 +825,9 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     c.bal.forEach(function (b, i) { tween($('[data-own="' + i + '"]'), "own" + i, Math.abs(b)); });
     $("#cFood").textContent = money(c.sub); $("#cTax").textContent = money(c.tax); $("#cTip").textContent = money(c.tip); $("#cGrand").textContent = money(c.grand);
     $("#cPaidRow").hidden = !c.paidTotal; $("#cPaid").textContent = money(c.paidTotal);
+    var et = endTotals(c);
+    $("#endCard").innerHTML = items.length ? endCardHTML("In the end, each person paid", c.share.map(function (s, i) { return { av: av(i, "lg"), name: nm(i), note: endNote(c.paid[i], et[i] - c.paid[i]), end: et[i] }; }),
+      et.reduce(function (a, b) { return a + b; }, 0), "Total for this bill") : "";
     $("#preview").textContent = summaryText(c);
     paintCombo();
   }
@@ -848,6 +884,10 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       var b = c.bal[i];
       l.push("  " + nm(i) + ": food " + money(c.food[i]) + " + tax " + money(c.taxO[i]) + " + tip " + money(c.tipO[i]) + " = " + money(s) + (c.paid[i] ? ", already paid " + money(c.paid[i]) : "") + " → " + (Math.abs(b) < 1 ? "all square" : b < 0 ? "gets back " + money(-b) : "pays " + money(b)));
     });
+    var et = endTotals(c);
+    l.push("", "IN THE END, EACH PERSON PAID");
+    et.forEach(function (v, i) { l.push("  " + nm(i) + ": " + money(v)); });
+    l.push("  Total: " + money(et.reduce(function (a, b) { return a + b; }, 0)));
     if (!c.all) l.push("", "Note: " + money(c.unassigned) + " of food isn't assigned yet.");
     return l.join("\n");
   }
@@ -861,6 +901,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     });
     l.push("  Food " + money(c.food[i]) + " + tax " + money(c.taxO[i]) + " + tip " + money(c.tipO[i]) + " = " + money(c.share[i]));
     if (c.paid[i]) l.push("  Already paid -" + money(c.paid[i]));
+    l.push("", "In the end, " + nm(i) + " paid " + money(endTotals(c)[i]) + " in total.");
     return l.join("\n");
   }
   function copyText(txt, btn) {
@@ -890,7 +931,8 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     var HEAD = 330, GAP = 20, rowsH = rows.length ? rows.reduce(function (a, it) { return a + it._h + GAP; }, 0) : 140;
     var xH = 90 + Math.max(1, xs.length) * 74;
     var tot = who === "all" ? 0 : (5 + (c.paid[who] ? 1 : 0)) * 66 + 40;
-    var H = HEAD + 40 + xH + 30 + rowsH + (tot ? tot + 20 : 0) + 110;
+    var et = endTotals(c), eH = who === "all" ? 110 + S.n * 60 + 70 : 0;
+    var H = HEAD + 40 + xH + 30 + (eH ? eH + 30 : 0) + rowsH + (tot ? tot + 20 : 0) + 110;
     var cv = document.createElement("canvas"); cv.width = W; cv.height = H; var g = cv.getContext("2d");
     function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
     function text(t, x, y, font, color, align) { g.font = font; g.fillStyle = color; g.textAlign = align || "left"; g.textBaseline = "alphabetic"; g.fillText(t, x, y); }
@@ -914,6 +956,13 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       text(money(shownAmt(x.amt)), P + IW - 28, ty, "600 40px " + MONO, ACC, "right"); ty += 74;
     });
     y += xH + 30;
+    if (eH) {
+      card(y, eH); text("IN THE END, EACH PERSON PAID", P + 28, y + 52, "700 26px " + SANS, MUTED); ty = y + 112;
+      et.forEach(function (v, i) { circ(P + 44, ty - 12, 16, col(i)); text(fit(nm(i), "600 34px " + SANS, IW - 360), P + 72, ty, "600 34px " + SANS, INK); text(money(v), P + IW - 28, ty, "500 36px " + MONO, INK, "right"); ty += 60; });
+      g.fillStyle = LINE; g.fillRect(P + 28, ty - 36, IW - 56, 2);
+      text("Total", P + 28, ty + 14, "800 34px " + SANS, INK); text(money(et.reduce(function (a, b) { return a + b; }, 0)), P + IW - 28, ty + 14, "800 36px " + MONO, ACC, "right");
+      y += eH + 30;
+    }
     if (!rows.length) { text("No items assigned yet", W / 2, y + 80, "500 34px " + SANS, MUTED, "center"); y += 140; }
     rows.forEach(function (it) {
       card(y, it._h); var sp = itemSplit(it);
