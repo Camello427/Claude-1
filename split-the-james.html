@@ -231,6 +231,20 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
 .endtotal { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding-top: 12px; }
 .endtotal span { font-weight: 700; }
 .endtotal b { font: 500 22px var(--f-mono); }
+.why { padding: 0; overflow: hidden; }
+.why .whead { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); background: hsl(var(--h) var(--ps) var(--pl) / .10); }
+.why .whead h3 { font: 800 22px var(--f-display); margin: 0; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.why .whead .res { text-align: right; }
+.why .whead .res small { display: block; font: 700 11px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.why .whead .res b { font: 500 22px var(--f-mono); }
+.why .whead .res.back small, .why .whead .res.back b { color: var(--ok); }
+.why .wbody { padding: 6px 16px 16px; }
+.why .story { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; font-size: 15px; margin: 10px 0 6px; }
+.why .wsec { font: 700 12px var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 14px 0 2px; }
+.why .line.sum { border-bottom: none; border-top: 2px solid var(--line); margin-top: 4px; padding-top: 10px; font-weight: 700; }
+.why .line.final { border-bottom: none; background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; margin-top: 8px; font-weight: 700; }
+.why .line.final.back { background: var(--ok-soft); }
+.why .line .minus { color: var(--ok); }
 .allsquare { text-align: center; padding: 18px; font: 700 18px var(--f-display); color: var(--ok); }
 .person { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); }
 .person:active { transform: scale(.98); }
@@ -295,6 +309,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   <section class="blk" id="s3"></section>
   <section class="blk" id="s4"></section>
   <section class="blk" id="s5"></section>
+  <section class="blk" id="s6"></section>
 </div>
 
 <div class="dock" aria-label="Live balances"><div class="dockin">
@@ -832,6 +847,48 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     paintCombo();
   }
 
+  /* ================= 6. why everyone owes what they owe ================= */
+  function pctTxt(x) { return (Math.round(x * 10) / 10).toString().replace(/\.0$/, "") + "%"; }
+  function whyCard(c, i) {
+    var name = esc(nm(i)), b = c.bal[i], back = b < 0, rows = "";
+    items.forEach(function (it) {
+      var sp = itemSplit(it); if (!sp[i]) return;
+      var others = sharesOf(it).filter(function (p) { return p !== i; });
+      rows += '<div class="line"><span>' + esc(it.name) + (it.qty > 1 ? " ×" + it.qty : "") + "<small>" +
+        (others.length ? it.shares[i] + "% of " + money(it.price) + ", shared with " + others.map(function (p) { return esc(nm(p)); }).join(" and ") : "all " + name + "'s") + "</small></span><b>" + money(sp[i]) + "</b></div>";
+    });
+    var foodPct = c.sub ? c.food[i] / c.sub * 100 : 0;
+    var taxWhy = S.taxFollows && c.sub ? pctTxt(c.tax / c.sub * 100) + " sales tax on " + name + "'s food" : "the " + money(c.tax) + " tax split evenly between " + S.n;
+    var tipWhy = S.tipFollows && c.sub ? name + "'s food is " + pctTxt(foodPct) + " of the bill, so " + name + " covers " + pctTxt(foodPct) + " of the " + money(c.tip) + " tip" : "the " + money(c.tip) + " tip split evenly between " + S.n;
+    var paidRows = "";
+    if (S.checkPayer === i) paidRows += '<div class="line"><span>Paid the bill' + "<small>" + (c.paidTotal ? "what was left after the items paid separately" : "food, tax and tip") + '</small></span><b class="minus">-' + money(c.remaining) + "</b></div>";
+    items.forEach(function (it) { if (it.paidBy === i) paidRows += '<div class="line"><span>Paid for ' + esc(it.name) + '<small>paid on their own</small></span><b class="minus">-' + money(it.price) + "</b></div>"; });
+    var xs = c.xfers.filter(function (x) { return x.amt >= 1 && (x.from === i || x.to === i); });
+    var result = Math.abs(b) < 1 ? name + " is all square." : back
+      ? name + " paid " + money(c.paid[i]) + " but only owes " + money(c.share[i]) + ", so " + name + " gets " + money(-b) + " back" + (xs.length ? " (" + xs.map(function (x) { return esc(nm(x.from)) + " pays " + money(shownAmt(x.amt)); }).join(", ") + ")" : "") + "."
+      : (c.paid[i] ? name + " already paid " + money(c.paid[i]) + ", so " + name + " still owes " : (S.checkPayer >= 0 ? esc(nm(S.checkPayer)) + " paid the bill" : "Nobody has paid the bill yet") + ", so " + name + " owes ") +
+        (xs.length === 1 ? esc(nm(xs[0].to)) + " " + money(shownAmt(xs[0].amt)) : money(b) + (xs.length ? ": " + xs.map(function (x) { return money(shownAmt(x.amt)) + " to " + esc(nm(x.to)); }).join(" and ") : "")) + ".";
+    var story = name + " had " + money(c.food[i]) + " of food" + (rows ? "" : " (nothing assigned yet)") + ". Tax adds " + money(c.taxO[i]) + " and the tip adds " + money(c.tipO[i]) + ", so " + name + "'s share of the bill is <strong>" + money(c.share[i]) + "</strong>. " + result;
+    var finalLine = Math.abs(b) < 1 ? '<div class="line final"><span>All square</span><b>' + money(0) + "</b></div>"
+      : back ? '<div class="line final back"><span>' + name + ' gets back</span><b class="minus">' + money(-b) + "</b></div>"
+      : '<div class="line final"><span>' + name + " pays" + (xs.length === 1 ? " " + esc(nm(xs[0].to)) : "") + "</span><b>" + money(xs.length ? xs.reduce(function (a, x) { return a + shownAmt(x.amt); }, 0) : b) + "</b></div>";
+    return '<div class="card why" style="--h:' + hue(i) + '"><div class="whead">' + av(i, "lg") + "<h3>" + name + '</h3><div class="res' + (back ? " back" : "") + '"><small>' + (Math.abs(b) < 1 ? "all square" : back ? "gets back" : "pays") + "</small><b>" + money(Math.abs(b)) + "</b></div></div>" +
+      '<div class="wbody"><div class="story">' + story + "</div>" +
+      '<p class="wsec">What ' + name + " is paying for</p>" + (rows || '<p class="hint">Nothing assigned yet.</p>') +
+      '<div class="line sum"><span>Food</span><b>' + money(c.food[i]) + "</b></div>" +
+      '<div class="line"><span>Tax<small>' + taxWhy + "</small></span><b>+" + money(c.taxO[i]) + "</b></div>" +
+      '<div class="line"><span>Tip<small>' + tipWhy + "</small></span><b>+" + money(c.tipO[i]) + "</b></div>" +
+      '<div class="line sum"><span>' + name + "'s share</span><b>" + money(c.share[i]) + "</b></div>" +
+      (paidRows ? '<p class="wsec">What ' + name + " already paid</p>" + paidRows : "") +
+      finalLine +
+      '<button class="ghost" data-copyp="' + i + '" style="margin-top:12px">Copy ' + name + "'s breakdown</button></div></div>";
+  }
+  function paintWhy(c) {
+    var el = $("#s6"); if (!el) return;
+    el.innerHTML = '<div class="sh"><span class="num">6</span><h2>Why everyone owes what they owe</h2></div><p class="say">One card per person: exactly what they\'re paying for and how it adds up.</p>' +
+      (items.length ? '<div class="stack">' + c.share.map(function (s, i) { return whyCard(c, i); }).join("") + "</div>" : '<div class="card empty">Add what you ordered in step 2 first.</div>');
+  }
+
   /* ================= person sheet ================= */
   function openSheet(i) {
     var c = compute(), b = c.bal[i], back = b < 0, rows = "";
@@ -893,6 +950,8 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   }
   function personText(c, i) {
     var b = c.bal[i], l = [billHead(false), nm(i).toUpperCase() + (Math.abs(b) < 1 ? " is all square" : b < 0 ? " gets back " + money(-b) : " pays " + money(b)), ""];
+    l.push(nm(i) + " had " + money(c.food[i]) + " of food. Tax adds " + money(c.taxO[i]) + " and the tip adds " + money(c.tipO[i]) + ", so " + nm(i) + "'s share is " + money(c.share[i]) + "." +
+      (c.paid[i] ? " " + nm(i) + " already paid " + money(c.paid[i]) + "." : ""), "");
     l = l.concat(xferLines(c, i), ["", "What " + nm(i) + " had:"]);
     items.forEach(function (it) {
       var sp = itemSplit(it); if (!sp[i]) return;
@@ -1043,7 +1102,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       $("#pcount").textContent = items.length ? c.doneCount + " of " + items.length + " have names" : "Nothing added yet";
       $("#pleft").textContent = !items.length ? "" : c.unassigned >= 1 ? money(c.unassigned) + " still needs a name" : "All done!";
     }
-    renderPaid(c); paintTip(c); paintSettle(c);
+    renderPaid(c); paintTip(c); paintSettle(c); paintWhy(c);
     $("#pills").innerHTML = c.bal.map(function (b, i) {
       var back = b < 0;
       return '<button class="pill' + (back ? " back" : "") + '" data-sheet="' + i + '">' + av(i) + '<span><span class="nm">' + esc(nm(i)) + (Math.abs(b) < 1 ? " · square" : back ? " gets" : " pays") + "</span><b>" + money(Math.abs(b)) + "</b></span></button>";
