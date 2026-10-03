@@ -3,20 +3,21 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* Layout: one scrolling page (people, dishes, tip & tax, totals) with a pinned live-totals bar. Cool white ground, indigo accent, vivid-but-refined person colors. */
+/* Layout: one scrolling page in five numbered steps (who's here, who ate what, who paid, tip, who pays who), pinned live balances at the bottom. Cool white ground, indigo accent, vivid person colors. */
 :root {
   --bg: #f4f6fc;
   --surface: #ffffff;
   --surface-2: #eaeefa;
   --ink: #131a33;
-  --muted: #5b6685;
+  --muted: #535e7d;
   --line: #dce2f3;
   --accent: #3d5afe;
   --accent-ink: #ffffff;
   --accent-soft: #e0e6ff;
-  --warn: #d9480f;
+  --warn: #c2410c;
   --warn-soft: #ffe9dd;
-  --ok: #0e9f6e;
+  --ok: #0b8a5f;
+  --ok-soft: #dcf5ea;
   --pl: 47%;
   --ps: 68%;
   --pt: #ffffff;
@@ -27,143 +28,46 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0d1226; --surface: #161d38; --surface-2: #202849; --ink: #eef1ff; --muted: #9ba6d0; --line: #2b3562;
-    --accent: #8c9eff; --accent-ink: #0d1226; --accent-soft: #28326b; --warn: #ffa45c; --warn-soft: #3d2a18; --ok: #4fd8a1;
+    --bg: #0d1226; --surface: #161d38; --surface-2: #202849; --ink: #eef1ff; --muted: #a3add6; --line: #2b3562;
+    --accent: #8c9eff; --accent-ink: #0d1226; --accent-soft: #28326b; --warn: #ffa45c; --warn-soft: #3d2a18; --ok: #4fd8a1; --ok-soft: #133a2d;
     --pl: 66%; --ps: 78%; --pt: #0d1226; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.35);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0d1226; --surface: #161d38; --surface-2: #202849; --ink: #eef1ff; --muted: #9ba6d0; --line: #2b3562;
-    --accent: #8c9eff; --accent-ink: #0d1226; --accent-soft: #28326b; --warn: #ffa45c; --warn-soft: #3d2a18; --ok: #4fd8a1;
-    --pl: 66%; --ps: 78%; --pt: #0d1226; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.35);
-    color-scheme: dark;
+  --bg: #0d1226; --surface: #161d38; --surface-2: #202849; --ink: #eef1ff; --muted: #a3add6; --line: #2b3562;
+  --accent: #8c9eff; --accent-ink: #0d1226; --accent-soft: #28326b; --warn: #ffa45c; --warn-soft: #3d2a18; --ok: #4fd8a1; --ok-soft: #133a2d;
+  --pl: 66%; --ps: 78%; --pt: #0d1226; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.35);
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
-body { overflow-x: hidden; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.4; padding-inline: 16px; -webkit-tap-highlight-color: transparent; }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-body, button, input { touch-action: manipulation; }
-input, button { font-size: max(16px, 1em); }
+body { overflow-x: hidden; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 17px; line-height: 1.45; padding-inline: 16px; -webkit-tap-highlight-color: transparent; }
+body, button, input, label { touch-action: manipulation; }
 button { font: inherit; color: inherit; cursor: pointer; }
+input { font-size: max(16px, 1em); }
+[hidden] { display: none !important; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
-#app { max-width: 600px; margin: 0 auto; padding-block: 18px 150px; }
-section.blk { margin-top: 30px; scroll-margin-top: 12px; }
-.sh { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 0 12px; }
-h2 { font: 800 24px/1.1 var(--f-display); letter-spacing: -.02em; margin: 0; }
-.hint { color: var(--muted); font-size: 13px; }
-.sec { font: 700 12px var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+#app { max-width: 600px; margin: 0 auto; padding-block: 18px 170px; }
+section.blk { margin-top: 34px; scroll-margin-top: 14px; }
+.sh { display: flex; align-items: center; gap: 12px; margin: 0 0 4px; }
+.sh .num { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font: 800 18px var(--f-display); flex: none; }
+h2 { font: 800 25px/1.1 var(--f-display); letter-spacing: -.02em; margin: 0; text-wrap: balance; }
+.say { color: var(--muted); margin: 0 0 14px 46px; font-size: 15px; }
+.hint { color: var(--muted); font-size: 14px; }
+.sec { font: 700 12px var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0; }
 
 /* header */
-.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .top h1 { font: 800 32px/1 var(--f-display); letter-spacing: -.03em; margin: 0; }
-.top p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+.top p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
 .rightcol { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: none; }
-.resetbtn { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 14px; font: 700 13px var(--f-body); color: var(--muted); transition: background .2s, color .2s, border-color .2s; }
-.resetbtn.arm { background: var(--warn); border-color: var(--warn); color: #fff; }
-.billpill { text-align: right; flex: none; }
+.pillbtn { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 14px; font: 700 13px var(--f-body); color: var(--muted); }
+.billpill { text-align: right; }
 .billpill small { display: block; color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
 .billpill b { font: 500 22px var(--f-mono); font-variant-numeric: tabular-nums; }
 
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 16px; }
-.stack { display: flex; flex-direction: column; gap: 12px; }
-
-/* avatars */
-.av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none; background: hsl(var(--h) var(--ps) var(--pl)); color: var(--pt); font: 700 14px var(--f-body); }
-.av.lg { width: 40px; height: 40px; font-size: 17px; }
-
-/* people */
-.pp { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.stepper { display: flex; align-items: center; gap: 12px; }
-.round { width: 46px; height: 46px; border-radius: 50%; border: none; background: var(--accent); color: var(--accent-ink); font: 700 26px/1 var(--f-body); display: grid; place-items: center; transition: transform .15s, opacity .2s; }
-.round:active { transform: scale(.88); }
-.round:disabled { opacity: .3; cursor: default; }
-.num { font: 800 46px/1 var(--f-display); min-width: 1.3ch; text-align: center; font-variant-numeric: tabular-nums; }
-.bump { animation: bump .3s cubic-bezier(.3,1.6,.5,1); }
-@keyframes bump { 0% { transform: scale(.8); } 100% { transform: scale(1); } }
-.ppl { color: var(--muted); font-size: 14px; flex: 1; min-width: 120px; }
-.names { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 14px; }
-.namebox { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 14px; padding: 5px 8px 5px 5px; animation: pop .35s cubic-bezier(.3,1.5,.5,1) both; min-width: 0; }
-.namebox input { flex: 1; min-width: 0; font: 500 16px var(--f-body); background: transparent; color: var(--ink); border: none; outline: none; padding: 6px 2px; }
-.namebox:focus-within { box-shadow: 0 0 0 2px var(--accent); }
-@keyframes pop { from { opacity: 0; transform: scale(.9) translateY(6px); } to { opacity: 1; transform: none; } }
-
-/* dishes */
-.progress { margin-bottom: 12px; }
-.progress .row { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 6px; gap: 8px; }
-.progress .row b { color: var(--ink); }
-.track { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
-.fill { height: 100%; width: 0; background: var(--accent); border-radius: 99px; transition: width .5s cubic-bezier(.2,.8,.2,1); }
-.dish { padding: 14px; transition: border-color .25s; }
-.dish.done { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
-.dhead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 10px; }
-.dname { font: 700 17px var(--f-display); min-width: 0; overflow-wrap: anywhere; }
-.qty { font: 500 12px var(--f-mono); color: var(--accent); background: var(--accent-soft); border-radius: 6px; padding: 2px 6px; margin-left: 6px; vertical-align: 2px; }
-.dprice { font: 500 16px var(--f-mono); font-variant-numeric: tabular-nums; flex: none; }
-.chips { display: flex; flex-wrap: wrap; gap: 7px; }
-.chip { display: flex; align-items: center; gap: 6px; padding: 4px 11px 4px 4px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface-2); font-size: 14px; font-weight: 500; transition: transform .15s, background .2s, border-color .2s; max-width: 100%; }
-.chip .av { width: 26px; height: 26px; font-size: 12px; }
-.chip .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 11ch; }
-.chip:active { transform: scale(.92); }
-.chip[aria-pressed="true"] { background: hsl(var(--h) var(--ps) var(--pl) / .16); border-color: hsl(var(--h) var(--ps) var(--pl)); animation: bump .3s cubic-bezier(.3,1.6,.5,1); }
-.chip.all { padding: 4px 14px; color: var(--muted); }
-.chip.all[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
-.split { margin-top: 10px; }
-.bar { display: flex; height: 12px; border-radius: 99px; overflow: hidden; background: var(--line); gap: 2px; }
-.bar i { display: block; height: 100%; background: hsl(var(--h) var(--ps) var(--pl)); transition: width .35s cubic-bezier(.2,.8,.2,1); min-width: 0; }
-.sline { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; color: var(--muted); }
-.sline.warn { color: var(--warn); font-weight: 500; margin-top: 0; }
-.linkbtn { background: none; border: none; color: var(--accent); font-weight: 700; font-size: 13px; padding: 6px 2px; }
-.sliders { display: grid; gap: 12px; margin-top: 6px; padding-top: 12px; border-top: 1px dashed var(--line); animation: pop .3s both; }
-.srow .lab { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; font-size: 14px; font-weight: 500; }
-.srow .lab .pc { margin-left: auto; font: 500 15px var(--f-mono); font-variant-numeric: tabular-nums; }
-.srow .lab .am { font: 400 12px var(--f-mono); color: var(--muted); min-width: 6ch; text-align: right; }
-input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 34px; background: transparent; margin: 0; --c: var(--accent); }
-input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 99px; background: linear-gradient(to right, var(--c) var(--p,0%), var(--line) var(--p,0%)); }
-input[type=range]::-moz-range-track { height: 8px; border-radius: 99px; background: var(--line); }
-input[type=range]::-moz-range-progress { height: 8px; border-radius: 99px; background: var(--c); }
-input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: var(--surface); border: 3px solid var(--c); margin-top: -10px; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
-input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--surface); border: 3px solid var(--c); }
-
-/* tip & tax */
-.big { font: 500 36px/1 var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
-.tiprow { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.tipnote { color: var(--muted); font-size: 13px; }
-.presets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-.presets button { border: 1.5px solid var(--line); background: var(--surface-2); border-radius: 14px; padding: 11px 0; font: 700 15px var(--f-body); transition: transform .15s, background .2s, border-color .2s; }
-.presets button:active { transform: scale(.94); }
-.presets button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.field { display: flex; align-items: center; gap: 10px; }
-.field label { color: var(--muted); font-size: 14px; flex: 1; }
-.money { display: flex; align-items: center; border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; padding: 0 12px; width: 140px; }
-.money:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.money span { color: var(--muted); font-family: var(--f-mono); }
-.money input { border: none; background: transparent; color: var(--ink); font: 500 18px var(--f-mono); padding: 10px 6px; touch-action: manipulation; width: 100%; min-width: 0; outline: none; text-align: right; }
-.switch { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; background: none; border: none; padding: 2px 0; }
-.switch .txt { flex: 1; min-width: 0; }
-.switch .txt b { display: block; font-weight: 700; }
-.switch .txt small { color: var(--muted); font-size: 13px; }
-.tg { width: 52px; height: 32px; border-radius: 99px; background: var(--line); position: relative; flex: none; transition: background .25s; }
-.tg::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); transition: transform .3s cubic-bezier(.3,1.5,.5,1); }
-.switch[aria-checked="true"] .tg { background: var(--accent); }
-.switch[aria-checked="true"] .tg::after { transform: translateX(20px); }
-hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
-
-/* totals */
-.tgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
-.pcard { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: center; padding: 14px; border-top: 5px solid hsl(var(--h) var(--ps) var(--pl)); animation: pop .45s cubic-bezier(.3,1.4,.5,1) both; min-width: 0; }
-.pcard .who { font: 700 16px var(--f-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pcard .owes { grid-column: 1 / -1; font: 500 34px/1.1 var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; margin-top: 6px; }
-.pcard .brk { grid-column: 1 / -1; display: flex; gap: 4px 12px; flex-wrap: wrap; font: 400 12px var(--f-mono); color: var(--muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
-.check { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); padding: 3px 2px; flex-wrap: wrap; }
-.check b { font: 500 15px var(--f-mono); color: var(--ink); }
-.check.bad b { color: var(--warn); }
-.check.good b { color: var(--ok); }
-.primary { width: 100%; border: none; border-radius: 16px; padding: 15px; background: var(--accent); color: var(--accent-ink); font: 700 16px var(--f-body); transition: transform .15s; }
-.primary:active { transform: scale(.97); }
-.mini { grid-column: 1 / -1; margin-top: 10px; border: 1.5px solid var(--line); background: var(--surface-2); border-radius: 12px; padding: 9px; font: 700 13px var(--f-body); }
-.mini:active { transform: scale(.97); }
-.ghost { width: 100%; border: 1.5px solid var(--line); border-radius: 16px; padding: 13px; background: var(--surface); font: 700 15px var(--f-body); }
-.ghost:active { transform: scale(.98); }
+/* bills */
 .tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
 .tabs::-webkit-scrollbar { display: none; }
 .tab { flex: none; border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 16px; font: 700 14px var(--f-body); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: transform .15s, background .2s; }
@@ -171,75 +75,237 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
 .tab[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .tab.new { border-style: dashed; color: var(--accent); background: transparent; }
 .billname { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-.billname label { color: var(--muted); font-size: 13px; flex: none; }
+.billname label { color: var(--muted); font-size: 14px; flex: none; }
 .textin { flex: 1; min-width: 0; width: 100%; font: 500 16px var(--f-body); background: var(--surface); color: var(--ink); border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; outline: none; }
 .textin:focus, .qtybox input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* steps strip */
+.steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 16px; }
+.stp { background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px; padding: 8px 4px 7px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; transition: border-color .25s, background .25s; }
+.stp .sn { width: 24px; height: 24px; border-radius: 50%; background: var(--surface-2); color: var(--muted); display: grid; place-items: center; font: 800 13px var(--f-display); transition: background .25s, color .25s; }
+.stp span { font-size: 12px; font-weight: 700; line-height: 1.15; }
+.stp small { font: 500 11px var(--f-mono); color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stp.done { border-color: color-mix(in srgb, var(--ok) 55%, var(--line)); }
+.stp.done .sn { background: var(--ok); color: #fff; }
+.stp.todo .sn { background: var(--warn); color: #fff; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 16px; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+
+/* avatars + chips */
+.av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none; background: hsl(var(--h) var(--ps) var(--pl)); color: var(--pt); font: 700 14px var(--f-body); }
+.av.lg { width: 42px; height: 42px; font-size: 18px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: hsl(var(--h) var(--ps) var(--pl)); display: inline-block; flex: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: flex; align-items: center; gap: 6px; padding: 5px 12px 5px 5px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface-2); font-size: 15px; font-weight: 500; transition: transform .15s, background .2s, border-color .2s; max-width: 100%; }
+.chip .av { width: 28px; height: 28px; font-size: 13px; }
+.chip .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 11ch; }
+.chip .mono { font: 500 12px var(--f-mono); color: var(--muted); }
+.chip:active { transform: scale(.92); }
+.chip[aria-pressed="true"] { background: hsl(var(--h) var(--ps) var(--pl) / .16); border-color: hsl(var(--h) var(--ps) var(--pl)); animation: bump .3s cubic-bezier(.3,1.6,.5,1); }
+.chip.all { padding: 5px 14px; color: var(--muted); }
+.chip.all[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+.chip.nobody[aria-pressed="true"] { background: var(--warn-soft); border-color: var(--warn); color: var(--ink); }
+@keyframes bump { 0% { transform: scale(.85); } 100% { transform: scale(1); } }
+@keyframes pop { from { opacity: 0; transform: scale(.94) translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* people */
+.pp { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.stepper { display: flex; align-items: center; gap: 12px; }
+.round { width: 48px; height: 48px; border-radius: 50%; border: none; background: var(--accent); color: var(--accent-ink); font: 700 26px/1 var(--f-body); display: grid; place-items: center; transition: transform .15s, opacity .2s; }
+.round:active { transform: scale(.88); }
+.round:disabled { opacity: .3; cursor: default; }
+.num-big { font: 800 48px/1 var(--f-display); min-width: 1.3ch; text-align: center; font-variant-numeric: tabular-nums; }
+.bump { animation: bump .3s cubic-bezier(.3,1.6,.5,1); }
+.ppl { color: var(--muted); font-size: 15px; flex: 1; min-width: 120px; }
+.names { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 14px; }
+.namebox { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 14px; padding: 5px 8px 5px 5px; animation: pop .35s cubic-bezier(.3,1.5,.5,1) both; min-width: 0; }
+.namebox input { flex: 1; min-width: 0; font: 500 16px var(--f-body); background: transparent; color: var(--ink); border: none; outline: none; padding: 6px 2px; }
+.namebox:focus-within { box-shadow: 0 0 0 2px var(--accent); }
+.linkbtn { background: none; border: none; color: var(--accent); font-weight: 700; font-size: 14px; padding: 6px 2px; }
+
+/* dishes */
+.tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.toolbtn { display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 9px 14px; font: 700 14px var(--f-body); color: var(--ink); cursor: pointer; transition: transform .15s; }
+.toolbtn:active { transform: scale(.95); }
+.toolbtn.primaryish { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.toolbtn svg { width: 18px; height: 18px; }
+.scanmsg { margin: -4px 0 12px; font-size: 14px; color: var(--muted); }
+.progress { margin-bottom: 12px; }
+.progress .row { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); margin-bottom: 6px; gap: 8px; }
+.progress .row b { color: var(--ink); }
+.track { height: 10px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.fill { height: 100%; width: 0; background: var(--ok); border-radius: 99px; transition: width .5s cubic-bezier(.2,.8,.2,1); }
+.dish { padding: 14px; transition: border-color .25s, box-shadow .3s; }
+.dish.done { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.dish.flash { box-shadow: 0 0 0 4px var(--warn); }
+.dhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+.dname { font: 700 18px var(--f-display); min-width: 0; overflow-wrap: anywhere; }
+.qty { font: 500 12px var(--f-mono); color: var(--accent); background: var(--accent-soft); border-radius: 6px; padding: 2px 6px; margin-left: 6px; vertical-align: 2px; }
+.ptag { display: inline-block; font: 700 11px var(--f-body); color: var(--ok); background: var(--ok-soft); border-radius: 6px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
+.dright { display: flex; align-items: center; gap: 6px; flex: none; }
+.dprice { font: 500 17px var(--f-mono); font-variant-numeric: tabular-nums; margin-right: 4px; }
+.icon { flex: none; width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--surface-2); color: var(--muted); display: grid; place-items: center; }
+.icon svg { width: 16px; height: 16px; }
+.icon:active { transform: scale(.88); }
+.split { margin-top: 10px; }
+.bar { display: flex; height: 14px; border-radius: 99px; overflow: hidden; background: var(--line); gap: 2px; }
+.bar i { display: block; height: 100%; background: hsl(var(--h) var(--ps) var(--pl)); transition: width .35s cubic-bezier(.2,.8,.2,1); min-width: 0; }
+.amts { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font-size: 14px; }
+.amts span { display: inline-flex; align-items: center; gap: 6px; }
+.amts b { font: 500 14px var(--f-mono); }
+.amts small { color: var(--muted); font-size: 12px; }
+.sline { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 4px; font-size: 14px; color: var(--muted); }
+.sline.warn { color: var(--warn); font-weight: 700; margin-top: 0; }
+.sliders { display: grid; gap: 12px; margin-top: 6px; padding-top: 12px; border-top: 1px dashed var(--line); animation: pop .3s both; }
+.srow .lab { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; font-size: 15px; font-weight: 500; }
+.srow .lab .pc { margin-left: auto; font: 500 15px var(--f-mono); font-variant-numeric: tabular-nums; }
+.srow .lab .am { font: 400 13px var(--f-mono); color: var(--muted); min-width: 6ch; text-align: right; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 34px; background: transparent; margin: 0; --c: var(--accent); }
+input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 99px; background: linear-gradient(to right, var(--c) var(--p,0%), var(--line) var(--p,0%)); }
+input[type=range]::-moz-range-track { height: 8px; border-radius: 99px; background: var(--line); }
+input[type=range]::-moz-range-progress { height: 8px; border-radius: 99px; background: var(--c); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: var(--surface); border: 3px solid var(--c); margin-top: -10px; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--surface); border: 3px solid var(--c); }
+.editgrid { display: grid; gap: 10px; }
 .addrow2 { display: flex; gap: 10px; align-items: center; }
+.money { display: flex; align-items: center; border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; padding: 0 12px; width: 140px; }
 .addrow2 .money { width: auto; flex: 1; }
+.money:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.money span { color: var(--muted); font-family: var(--f-mono); }
+.money input { border: none; background: transparent; color: var(--ink); font: 500 18px var(--f-mono); padding: 10px 6px; width: 100%; min-width: 0; outline: none; text-align: right; }
 .qtybox { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
 .qtybox input { width: 64px; text-align: center; font: 500 18px var(--f-mono); background: var(--surface); color: var(--ink); border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 4px; outline: none; }
-.paidrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13px; color: var(--muted); }
-.paidrow .chip { padding: 3px 10px 3px 3px; font-size: 13px; }
-.paidrow .chip .av { width: 22px; height: 22px; font-size: 11px; }
-.ptag { display: inline-block; font: 700 11px var(--f-body); letter-spacing: .02em; color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); border-radius: 6px; padding: 2px 6px; margin-left: 6px; vertical-align: 2px; }
+.btnrow { display: flex; gap: 10px; }
+.btnrow > * { flex: 1; }
+.empty { text-align: center; color: var(--muted); padding: 22px 16px; }
+
+/* who paid */
+.q { font: 700 17px var(--f-body); margin: 0 0 10px; }
 .paylist { display: flex; flex-direction: column; gap: 8px; }
 .payrow { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 12px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface-2); transition: background .2s, border-color .2s, transform .12s; }
 .payrow:active { transform: scale(.98); }
-.payrow .box { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; color: transparent; font: 700 14px/1 var(--f-body); transition: background .2s, border-color .2s, color .2s; }
+.payrow .box { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--muted); display: grid; place-items: center; color: transparent; font: 700 14px/1 var(--f-body); transition: background .2s, border-color .2s, color .2s; }
 .payrow .pn { min-width: 0; font-weight: 500; overflow-wrap: anywhere; }
 .payrow .pn small { display: block; color: var(--muted); font-size: 12px; font-weight: 400; }
 .payrow .pa { font: 500 15px var(--f-mono); font-variant-numeric: tabular-nums; }
-.payrow[aria-pressed="true"] { background: color-mix(in srgb, var(--ok) 13%, var(--surface)); border-color: var(--ok); }
+.payrow[aria-pressed="true"] { background: var(--ok-soft); border-color: var(--ok); }
 .payrow[aria-pressed="true"] .box { background: var(--ok); border-color: var(--ok); color: #fff; }
-.chip .mono { font: 500 12px var(--f-mono); color: var(--muted); }
-.ptag[hidden], .check[hidden] { display: none; }
-.olbl { grid-column: 1 / -1; margin-top: 8px; font: 700 11px var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-.olbl.back { color: var(--ok); }
-.pcard .owes { margin-top: 0 !important; }
-.dright { display: flex; align-items: center; gap: 10px; flex: none; }
-.del { flex: none; width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--surface-2); color: var(--muted); font: 700 18px/1 var(--f-body); display: grid; place-items: center; align-self: center; }
-.del:active { transform: scale(.88); }
-.empty { text-align: center; color: var(--muted); padding: 22px 16px; }
-.copybox { margin: 0; white-space: pre-wrap; font: 400 13px var(--f-mono); background: var(--surface-2); border-radius: 12px; padding: 12px; margin-top: 10px; max-height: 360px; overflow: auto; }
+.explain { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; font-size: 14px; }
 
-/* pinned live totals */
+/* tip */
+.big { font: 500 38px/1 var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.tiprow { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.presets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.presets button { border: 1.5px solid var(--line); background: var(--surface-2); border-radius: 14px; padding: 12px 0; font: 700 16px var(--f-body); transition: transform .15s, background .2s, border-color .2s; }
+.presets button:active { transform: scale(.94); }
+.presets button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.field { display: flex; align-items: center; gap: 10px; }
+.field label { color: var(--muted); font-size: 15px; flex: 1; }
+.switch { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; background: none; border: none; padding: 2px 0; }
+.switch .txt { flex: 1; min-width: 0; }
+.switch .txt b { display: block; font-weight: 700; font-size: 16px; }
+.switch .txt small { color: var(--muted); font-size: 13px; }
+.tg { width: 52px; height: 32px; border-radius: 99px; background: var(--line); position: relative; flex: none; transition: background .25s; }
+.tg::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); transition: transform .3s cubic-bezier(.3,1.5,.5,1); }
+.switch[aria-checked="true"] .tg { background: var(--accent); }
+.switch[aria-checked="true"] .tg::after { transform: translateX(20px); }
+hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
+
+/* who pays who */
+.warnbox { background: var(--warn-soft); color: var(--warn); border-radius: 12px; padding: 10px 14px; font-size: 15px; font-weight: 700; }
+.xfer { display: grid; grid-template-columns: auto auto auto 1fr; align-items: center; gap: 10px; padding: 14px; animation: pop .4s cubic-bezier(.3,1.4,.5,1) both; }
+.xfer .arrow { color: var(--muted); font: 700 22px var(--f-body); }
+.xfer .words { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.xfer .words span { font-size: 17px; }
+.xfer .words b { font: 500 30px var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.xfer .venmo { grid-column: 1 / -1; font-size: 14px; }
+.xfer .venmo a { color: var(--accent); font-weight: 700; }
+.allsquare { text-align: center; padding: 18px; font: 700 18px var(--f-display); color: var(--ok); }
+.person { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); }
+.person:active { transform: scale(.98); }
+.person .nm { display: block; font: 700 17px var(--f-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.person .sub { display: block; font: 400 12px var(--f-mono); color: var(--muted); }
+.person .bal { text-align: right; }
+.person .bal small { display: block; font: 700 11px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.person .bal b { font: 500 20px var(--f-mono); font-variant-numeric: tabular-nums; }
+.person .bal.back small, .person .bal.back b { color: var(--ok); }
+.check { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 15px; color: var(--muted); padding: 3px 2px; flex-wrap: wrap; }
+.check b { font: 500 15px var(--f-mono); color: var(--ink); }
+.primary { width: 100%; border: none; border-radius: 16px; padding: 15px; background: var(--accent); color: var(--accent-ink); font: 700 16px var(--f-body); transition: transform .15s; }
+.primary:active { transform: scale(.97); }
+.ghost { width: 100%; border: 1.5px solid var(--line); border-radius: 16px; padding: 13px; background: var(--surface); font: 700 15px var(--f-body); }
+.ghost:active { transform: scale(.98); }
+.copybox { margin: 0; white-space: pre-wrap; font: 400 13px var(--f-mono); background: var(--surface-2); border-radius: 12px; padding: 12px; max-height: 320px; overflow: auto; }
+#shareimg { width: 100%; border-radius: 14px; border: 1px solid var(--line); display: block; }
+
+/* dock */
 .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgba(19,26,51,.1); padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px)); }
 .dockin { max-width: 600px; margin: 0 auto; padding-inline: 16px; }
-.dstat { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-.dstat .left { color: var(--warn); }
-.dstat .left.ok { color: var(--ok); }
+.dstat { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+.dstat > span { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.dleft { border: none; background: var(--warn-soft); color: var(--warn); border-radius: 999px; padding: 4px 12px; font: 700 13px var(--f-body); }
+.dleft.ok { background: var(--ok-soft); color: var(--ok); }
 .pills { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .pills::-webkit-scrollbar { display: none; }
-.pill { flex: none; display: flex; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 14px; padding: 6px 12px 6px 6px; }
-.pill .nm { display: block; font-size: 11px; color: var(--muted); max-width: 9ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pill { flex: none; display: flex; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 14px; padding: 6px 12px 6px 6px; border: none; text-align: left; }
+.pill .nm { display: block; font-size: 12px; color: var(--muted); max-width: 13ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pill b { font: 500 16px var(--f-mono); font-variant-numeric: tabular-nums; }
+.pill.back b { color: var(--ok); }
+
+/* toast, sheet, confetti */
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(126px + env(safe-area-inset-bottom, 0px)); z-index: 30; background: var(--ink); color: var(--bg); border-radius: 14px; padding: 10px 10px 10px 16px; display: flex; align-items: center; gap: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.25); width: max-content; max-width: calc(100% - 32px); }
+.toast span { font-size: 15px; }
+.toast button { border: none; background: var(--accent); color: var(--accent-ink); border-radius: 10px; padding: 8px 14px; font: 700 14px var(--f-body); flex: none; }
+.sheetbg { position: fixed; inset: 0; z-index: 40; background: rgba(8,10,25,.5); display: flex; align-items: flex-end; justify-content: center; animation: fade .2s both; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.sheet { background: var(--bg); width: 100%; max-width: 600px; max-height: 88%; overflow: auto; border-radius: 22px 22px 0 0; padding: 18px 16px calc(20px + env(safe-area-inset-bottom, 0px)); animation: up .32s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sheet .shead { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.sheet .shead h3 { font: 800 24px var(--f-display); margin: 0; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.sheet .bigline { font: 500 34px var(--f-mono); letter-spacing: -.02em; margin: 2px 0 14px; }
+.sheet .bigline.back { color: var(--ok); }
+.line { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 15px; }
+.line:last-child { border-bottom: none; }
+.line b { font: 500 15px var(--f-mono); white-space: nowrap; }
+.line small { display: block; color: var(--muted); font-size: 12px; }
+#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 </style>
 
 <div id="app">
   <header class="top">
     <div><h1>Split the Check</h1><p id="meta"></p></div>
-    <div class="rightcol"><button class="resetbtn" id="reset">Reset</button><div class="billpill"><small>Bill total</small><b id="billtotal">$0.00</b></div></div>
+    <div class="rightcol"><button class="pillbtn" id="reset">Reset bill</button><div class="billpill"><small>Bill total</small><b id="billtotal">$0.00</b></div></div>
   </header>
-
-  <section class="blk" id="sBills" style="margin-top:18px"></section>
-  <section class="blk" id="sPeople"></section>
-  <section class="blk" id="sDishes"></section>
-  <section class="blk" id="sPaid"></section>
-  <section class="blk" id="sTip"></section>
-  <section class="blk" id="sTotals"></section>
+  <section id="sBills" style="margin-top:16px"></section>
+  <nav class="steps" id="steps" aria-label="Steps"></nav>
+  <section class="blk" id="s1"></section>
+  <section class="blk" id="s2"></section>
+  <section class="blk" id="s3"></section>
+  <section class="blk" id="s4"></section>
+  <section class="blk" id="s5"></section>
 </div>
 
-<div class="dock" aria-label="Live totals"><div class="dockin">
-  <div class="dstat"><span>Who owes</span><span class="left" id="dleft"></span></div>
+<div class="dock" aria-label="Live balances"><div class="dockin">
+  <div class="dstat"><span>Who pays</span><button class="dleft" id="dleft"></button></div>
   <div class="pills" id="pills"></div>
 </div></div>
+<div class="toast" id="toast" hidden><span id="toastMsg"></span><button id="undoBtn">Undo</button></div>
+<div class="sheetbg" id="sheet" hidden><div class="sheet" id="sheetBody" role="dialog" aria-modal="true"></div></div>
+<canvas id="confetti" hidden></canvas>
 
 <script>
 (function () {
   "use strict";
   var HUES = [224, 350, 160, 32, 272, 328, 190, 88, 14, 245, 130, 305];
-  // Receipt lines for the James bill, prices in cents
+  var ICON = {
+    edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+    del: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    cam: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>'
+  };
+
+  /* ================= data ================= */
   function jamesItems() {
     return [
       ["Creamed Spinach", 1, 1500], ["Tomahawk", 1, 18500], ["Tanqueray", 1, 1700], ["Caviar Bump", 4, 11200],
@@ -249,29 +315,33 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   }
   var KEY = "split-the-check-v2", OLDKEY = "split-the-check-the-james-v1";
   function freshS(kind) {
-    var f = { n: 4, names: ["", "", "", ""], taxCents: 0, taxFollows: true, tipFollows: true, tipMode: "pct", tipPct: 20, tipAmtCents: 0, shareWho: "all" };
+    var f = { n: 4, names: ["", "", "", ""], venmo: [], showVenmo: false, taxCents: 0, taxFollows: true, tipFollows: true, tipMode: "pct", tipPct: 20, tipAmtCents: 0, tipOnTax: false,
+      shareWho: "all", checkPayer: 0, roundUp: false, payWho: 0 };
     if (kind === "james") { f.taxCents = 4594; f.tipMode = "amt"; f.tipAmtCents = 12000; }
     return f;
   }
   function newBill(kind, title, id) { return { id: id, kind: kind, title: title, S: freshS(kind), items: kind === "james" ? jamesItems() : [], next: kind === "james" ? 12 : 0 }; }
   var bills = [newBill("james", "The James", 1)], cur = 0, nextBillId = 2;
-  var S = bills[0].S, items = bills[0].items;
+  var S = bills[0].S, items = bills[0].items, shown = {};
   function bind() { S = bills[cur].S; items = bills[cur].items; shown = {}; }
-  function save() {
-    try {
-      localStorage.setItem(KEY, JSON.stringify({ v: 2, cur: cur, nextBillId: nextBillId, bills: bills.map(function (b) {
-        return { id: b.id, kind: b.kind, title: b.title, next: b.next, S: b.S, items: b.items.map(function (i) { return { id: i.id, name: i.name, qty: i.qty, price: i.price, shares: i.shares, open: i.open, paidBy: i.paidBy }; }) };
-      }) }));
-    } catch (e) {}
+
+  function serialize() {
+    return { v: 2, cur: cur, nextBillId: nextBillId, bills: bills.map(function (b) {
+      return { id: b.id, kind: b.kind, title: b.title, next: b.next, S: b.S, items: b.items.map(function (i) { return { id: i.id, name: i.name, qty: i.qty, price: i.price, shares: i.shares, open: i.open, paidBy: i.paidBy }; }) };
+    }) };
   }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(serialize())); } catch (e) {} }
   function cleanS(raw, kind) {
     var f = freshS(kind); raw = raw || {};
-    Object.keys(f).forEach(function (k) { if (raw[k] !== undefined && typeof raw[k] === typeof f[k]) f[k] = raw[k]; });
+    Object.keys(f).forEach(function (k) { if (raw[k] !== undefined && typeof raw[k] === typeof f[k] && !Array.isArray(f[k])) f[k] = raw[k]; });
     f.names = (Array.isArray(raw.names) ? raw.names : f.names).map(String).map(function (x) { return x.slice(0, 14); });
-    f.n = Math.max(1, Math.min(12, Math.round(f.n))); while (f.names.length < f.n) f.names.push("");
+    f.venmo = (Array.isArray(raw.venmo) ? raw.venmo : []).map(String).map(function (x) { return x.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 30); });
+    f.n = Math.max(1, Math.min(12, Math.round(f.n) || 1)); while (f.names.length < f.n) f.names.push("");
     if (f.tipMode !== "pct" && f.tipMode !== "amt") f.tipMode = "pct";
-    f.taxCents = Math.max(0, Math.round(f.taxCents) || 0); f.tipAmtCents = Math.max(0, Math.round(f.tipAmtCents) || 0); f.tipPct = Math.max(0, Math.min(100, f.tipPct));
+    f.taxCents = Math.max(0, Math.round(f.taxCents) || 0); f.tipAmtCents = Math.max(0, Math.round(f.tipAmtCents) || 0); f.tipPct = Math.max(0, Math.min(100, f.tipPct || 0));
     f.shareWho = typeof raw.shareWho === "number" && raw.shareWho >= 0 && raw.shareWho < f.n ? Math.round(raw.shareWho) : "all";
+    f.checkPayer = Math.round(f.checkPayer); if (!(f.checkPayer >= -1 && f.checkPayer < f.n)) f.checkPayer = 0;
+    f.payWho = Math.max(0, Math.min(f.n - 1, Math.round(f.payWho) || 0));
     return f;
   }
   function cleanShares(x, n) {
@@ -279,48 +349,48 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     Object.keys((x && x.shares) || {}).forEach(function (k) { var v = +x.shares[k]; if (+k >= 0 && +k < n && v >= 0 && v <= 100) { o[+k] = Math.round(v); sum += o[+k]; } });
     return sum === 100 ? o : {};
   }
-  function load() { // restore the last session on this device, ignoring anything malformed
-    try {
-      var d = JSON.parse(localStorage.getItem(KEY) || "null");
-      if (d && d.v === 2 && Array.isArray(d.bills) && d.bills.length) {
-        var out = d.bills.slice(0, 8).map(function (b, bi) {
-          var kind = b.kind === "james" ? "james" : "manual", st = cleanS(b.S, kind), seen = {}, max = -1;
-          var its = (Array.isArray(b.items) ? b.items : []).filter(function (x) { return x && typeof x.name === "string"; }).slice(0, 100).map(function (x, i) {
-            var id = Math.round(+x.id); if (!isFinite(id) || id < 0 || seen[id]) id = 1000 + i; seen[id] = 1; if (id > max) max = id;
-            var sh = cleanShares(x, st.n);
-            return { id: id, name: x.name.slice(0, 40), qty: Math.max(1, Math.min(99, Math.round(+x.qty) || 1)), price: Math.max(0, Math.round(+x.price) || 0), shares: sh, open: !!x.open && Object.keys(sh).length > 1, paidBy: typeof x.paidBy === "number" && x.paidBy >= 0 && x.paidBy < st.n ? Math.round(x.paidBy) : null };
-          });
-          return { id: Math.round(+b.id) || bi + 1, kind: kind, title: String(b.title || "").slice(0, 28), S: st, items: its, next: max + 1 };
-        });
-        bills = out; cur = Math.max(0, Math.min(out.length - 1, Math.round(+d.cur) || 0)); nextBillId = Math.max(+d.nextBillId || 0, out.length + 1);
-      } else { // migrate the earlier single-bill save
-        var o = JSON.parse(localStorage.getItem(OLDKEY) || "null"); if (!o || o.v !== 1 || !o.S) return;
-        var jb = newBill("james", "The James", 1); jb.S = cleanS(o.S, "james");
-        (o.items || []).forEach(function (x, i) { var it = jb.items[i]; if (!it) return; it.shares = cleanShares(x, jb.S.n); it.open = !!x && !!x.open && Object.keys(it.shares).length > 1; });
-        bills = [jb]; cur = 0;
-      }
-    } catch (e) {}
-    bind();
+  function restore(d) { // accepts a saved v2 object; ignores anything malformed
+    if (!d || d.v !== 2 || !Array.isArray(d.bills) || !d.bills.length) return false;
+    var out = d.bills.slice(0, 8).map(function (b, bi) {
+      var kind = b.kind === "james" ? "james" : "manual", st = cleanS(b.S, kind), seen = {}, max = -1;
+      var its = (Array.isArray(b.items) ? b.items : []).filter(function (x) { return x && typeof x.name === "string"; }).slice(0, 150).map(function (x, i) {
+        var id = Math.round(+x.id); if (!isFinite(id) || id < 0 || seen[id]) id = 1000 + i; seen[id] = 1; if (id > max) max = id;
+        var sh = cleanShares(x, st.n);
+        return { id: id, name: x.name.slice(0, 40), qty: Math.max(1, Math.min(99, Math.round(+x.qty) || 1)), price: Math.max(0, Math.round(+x.price) || 0), shares: sh,
+          open: !!x.open && Object.keys(sh).length > 1, paidBy: typeof x.paidBy === "number" && x.paidBy >= 0 && x.paidBy < st.n ? Math.round(x.paidBy) : null };
+      });
+      return { id: Math.round(+b.id) || bi + 1, kind: kind, title: String(b.title || "").slice(0, 28), S: st, items: its, next: max + 1 };
+    });
+    bills = out; cur = Math.max(0, Math.min(out.length - 1, Math.round(+d.cur) || 0)); nextBillId = Math.max(+d.nextBillId || 0, out.length + 1);
+    bind(); return true;
   }
-  function byId(id) { for (var i = 0; i < items.length; i++) if (items[i].id === id) return items[i]; return null; }
-  function billHead(long) { var b = bills[cur]; return b.kind === "james" && b.title === "The James" ? (long ? "The James · Babylon · Check #140 · 9/25" : "The James · Check #140 · 9/25") : (b.title || "Bill"); }
-  var shown = {};
+  function load() {
+    try {
+      if (restore(JSON.parse(localStorage.getItem(KEY) || "null"))) return;
+      var o = JSON.parse(localStorage.getItem(OLDKEY) || "null"); if (!o || o.v !== 1 || !o.S) return;
+      var jb = newBill("james", "The James", 1); jb.S = cleanS(o.S, "james");
+      (o.items || []).forEach(function (x, i) { var it = jb.items[i]; if (it) it.shares = cleanShares(x, jb.S.n); });
+      bills = [jb]; cur = 0; bind();
+    } catch (e) {}
+  }
+
+  /* ================= helpers ================= */
   var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
-
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function money(c) { var s = Math.abs(c) < 0.5 ? 0 : c; return (s < 0 ? "-" : "") + "$" + (Math.abs(s) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function dflt(i) { return i === 0 ? "Me" : "Friend " + i; }
-  function nm(i) { return (S.names[i] || "").trim() || dflt(i); }
+  function nm(i) { return i === "table" ? "the server" : (S.names[i] || "").trim() || dflt(i); }
   function hue(i) { return HUES[i % HUES.length]; }
   function av(i, cls) { return '<span class="av ' + (cls || "") + '" data-avp="' + i + '" style="--h:' + hue(i) + '">' + esc(nm(i).charAt(0).toUpperCase()) + "</span>"; }
-  function subtotal() { return items.reduce(function (a, it) { return a + it.price; }, 0); }
-  function tipCents() { return S.tipMode === "amt" ? S.tipAmtCents : Math.round(subtotal() * S.tipPct / 100); }
-  function sharesOf(it) { return Object.keys(it.shares).map(Number); }
+  function dot(i) { return '<i class="dot" style="--h:' + hue(i) + '"></i>'; }
   function parseMoney(v) { var n = parseFloat(String(v).replace(/[^0-9.]/g, "")); return isNaN(n) ? 0 : Math.round(n * 100); }
-
-  function lr(total, weights) { // largest-remainder split of whole units
+  function sharesOf(it) { return Object.keys(it.shares).map(Number).filter(function (p) { return p < S.n; }).sort(function (a, b) { return a - b; }); }
+  function byId(id) { for (var i = 0; i < items.length; i++) if (items[i].id === id) return items[i]; return null; }
+  function billHead(long) { var b = bills[cur]; return b.kind === "james" && b.title === "The James" ? (long ? "The James · Babylon · Check #140 · 9/25" : "The James · Check #140 · 9/25") : (b.title || "Bill"); }
+  function lr(total, weights) { // largest-remainder split of whole cents
+    if (!weights.length) return [];
     var sum = weights.reduce(function (a, b) { return a + b; }, 0);
     if (!sum) { var e = weights.length; return weights.map(function (_, i) { return Math.floor(total / e) + (i < total % e ? 1 : 0); }); }
     var raw = weights.map(function (w) { return total * w / sum; });
@@ -329,30 +399,48 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     return out;
   }
   function evenShares(ids) { var v = lr(100, ids.map(function () { return 1; })), o = {}; ids.forEach(function (id, i) { o[id] = v[i]; }); return o; }
+  function everyone() { var a = []; for (var k = 0; k < S.n; k++) a.push(k); return a; }
 
+  /* ================= math ================= */
+  function subtotal() { return items.reduce(function (a, it) { return a + it.price; }, 0); }
+  function tipCents() { return S.tipMode === "amt" ? S.tipAmtCents : Math.round((subtotal() + (S.tipOnTax ? S.taxCents : 0)) * S.tipPct / 100); }
+  function itemSplit(it) { var ids = sharesOf(it), v = lr(it.price, ids.map(function (p) { return it.shares[p]; })), o = {}; ids.forEach(function (p, k) { o[p] = v[k]; }); return o; }
   function compute() {
-    var sub = subtotal(), tip = tipCents(), tax = S.taxCents, n = S.n, food = [], i, assigned = 0;
+    var n = S.n, sub = subtotal(), tax = S.taxCents, tip = tipCents(), grand = sub + tax + tip, food = [], i, assigned = 0, done = 0;
     for (i = 0; i < n; i++) food.push(0);
-    items.forEach(function (it) {
-      var tot = 0;
-      sharesOf(it).forEach(function (p) { if (p < n) { food[p] += it.price * it.shares[p] / 100; tot += it.shares[p]; } });
-      assigned += it.price * tot / 100;
-    });
-    var unassigned = sub - assigned;
+    items.forEach(function (it) { var sp = itemSplit(it), any = false; Object.keys(sp).forEach(function (k) { food[k] += sp[k]; assigned += sp[k]; any = true; }); if (any) done++; });
+    var unassigned = sub - assigned, all = items.length > 0 && unassigned === 0;
     var taxR = food.map(function (f) { return S.taxFollows && sub ? tax * f / sub : tax / n; });
     var tipR = food.map(function (f) { return S.tipFollows && sub ? tip * f / sub : tip / n; });
-    var raw = food.map(function (f, k) { return f + taxR[k] + tipR[k]; });
-    var totals = unassigned < 0.5 ? lr(sub + tax + tip, raw) : raw.map(Math.round); // exact to the cent once everything is assigned
-    var taxO = taxR.map(Math.round), tipO = tipR.map(Math.round);
+    var extras = all ? lr(tax + tip, taxR.map(function (t, k) { return t + tipR[k]; })) : taxR.map(function (t, k) { return Math.round(t + tipR[k]); });
+    var taxO = taxR.map(Math.round), tipO = extras.map(function (x, k) { return x - taxO[k]; });
+    var share = food.map(function (f, k) { return f + extras[k]; });
     var credit = food.map(function () { return 0; }), paidTotal = 0;
     items.forEach(function (it) { if (it.paidBy != null && it.paidBy < n) { credit[it.paidBy] += it.price; paidTotal += it.price; } });
-    var net = totals.map(function (t, k) { return t - credit[k]; });
-    return { sub: sub, tip: tip, tax: tax, grand: sub + tax + tip, totals: totals, net: net, credit: credit, paidTotal: paidTotal, taxO: taxO, tipO: tipO,
-      food: totals.map(function (t, k) { return t - taxO[k] - tipO[k]; }), unassigned: unassigned,
-      sum: totals.reduce(function (a, b) { return a + b; }, 0),
-      doneCount: items.filter(function (it) { return sharesOf(it).length; }).length };
+    var remaining = Math.max(0, grand - paidTotal);
+    var paid = credit.map(function (c, k) { return c + (S.checkPayer === k ? remaining : 0); });
+    var bal = share.map(function (s, k) { return s - paid[k]; });
+    return { sub: sub, tax: tax, tip: tip, grand: grand, food: food, taxO: taxO, tipO: tipO, share: share, credit: credit, paidTotal: paidTotal, remaining: remaining,
+      paid: paid, bal: bal, unassigned: unassigned, all: all, doneCount: done, xfers: settle(bal, remaining) };
   }
+  function settle(bal, remaining) { // fewest simple payments: biggest owers pay biggest receivers
+    var debt = [], cred = [];
+    bal.forEach(function (b, i) { if (b > 0) debt.push({ who: i, amt: b }); else if (b < 0) cred.push({ who: i, amt: -b }); });
+    if (S.checkPayer === -1 && remaining > 0) cred.push({ who: "table", amt: remaining });
+    debt.sort(function (a, b) { return b.amt - a.amt; }); cred.sort(function (a, b) { return b.amt - a.amt; });
+    var out = [], di = 0, ci = 0;
+    while (di < debt.length && ci < cred.length) {
+      var a = Math.min(debt[di].amt, cred[ci].amt);
+      if (a > 0) out.push({ from: debt[di].who, to: cred[ci].who, amt: a });
+      debt[di].amt -= a; cred[ci].amt -= a;
+      if (debt[di].amt <= 0) di++;
+      if (cred[ci].amt <= 0) ci++;
+    }
+    return out;
+  }
+  function shownAmt(a) { return S.roundUp ? Math.ceil(a / 100) * 100 : a; }
 
+  /* ================= animated numbers ================= */
   function tween(el, key, to) {
     if (!el) return;
     var from = shown[key] == null ? 0 : shown[key]; shown[key] = to;
@@ -361,85 +449,118 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     (function f(t) { var k = Math.min(1, (t - t0) / d), e = 1 - Math.pow(1 - k, 3); el.textContent = money(from + (to - from) * e); if (k < 1) el._raf = requestAnimationFrame(f); else el.textContent = money(to); })(t0);
   }
 
-  /* ---- people ---- */
+  /* ================= undo ================= */
+  var undoStack = [], toastTimer = null;
+  function snap(msg) { undoStack.push(JSON.stringify(serialize())); if (undoStack.length > 25) undoStack.shift(); if (msg) toast(msg); }
+  function toast(msg) {
+    var t = $("#toast"); $("#toastMsg").textContent = msg; t.hidden = false; $("#undoBtn").hidden = !undoStack.length;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 6500);
+  }
+  function undo() {
+    var s = undoStack.pop(); if (!s) return;
+    try { restore(JSON.parse(s)); } catch (e) {}
+    renderAll();
+    if (undoStack.length) toast("Undone. Tap again to undo more."); else { toast("Undone."); $("#undoBtn").hidden = true; }
+  }
+
+  /* ================= 0. bills ================= */
+  function renderBills() {
+    var tabs = bills.map(function (b, i) { return '<button class="tab" data-bill="' + i + '" aria-pressed="' + (i === cur) + '">' + esc(b.title || "Bill") + "</button>"; }).join("");
+    $("#sBills").innerHTML = '<div class="tabs">' + tabs + (bills.length < 8 ? '<button class="tab new" id="newBill">+ New bill</button>' : "") + "</div>" +
+      '<div class="billname"><label for="billTitle">Bill name</label><input class="textin" id="billTitle" value="' + esc(bills[cur].title) + '" maxlength="28" placeholder="Name this bill">' +
+      (bills.length > 1 ? '<button class="linkbtn" id="delBill">Delete</button>' : "") + "</div>";
+  }
+  function goBill(i) { cur = i; bind(); renderAll(); window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" }); }
+
+  /* ================= 1. people ================= */
   function renderPeople() {
-    var boxes = "";
-    for (var i = 0; i < S.n; i++) boxes += '<label class="namebox">' + av(i) + '<input data-i="' + i + '" value="' + esc(S.names[i]) + '" maxlength="14" placeholder="' + dflt(i) + '" aria-label="Name for person ' + (i + 1) + '"></label>';
-    $("#sPeople").innerHTML = '<div class="sh"><h2>Who\'s splitting?</h2></div><div class="card"><div class="pp"><div class="stepper"><button class="round" id="minus" aria-label="Fewer people"' + (S.n <= 1 ? " disabled" : "") +
-      '>−</button><div class="num" id="count">' + S.n + '</div><button class="round" id="plus" aria-label="More people"' + (S.n >= 12 ? " disabled" : "") + '>+</button></div><div class="ppl">people' + (bills[cur].kind === "james" ? "<br>(receipt says 4 guests)" : "") + '</div></div><div class="names">' + boxes + "</div></div>";
+    var boxes = "", vrows = "";
+    for (var i = 0; i < S.n; i++) {
+      boxes += '<label class="namebox">' + av(i) + '<input data-i="' + i + '" value="' + esc(S.names[i]) + '" maxlength="14" placeholder="' + dflt(i) + '" aria-label="Name for person ' + (i + 1) + '"></label>';
+      vrows += '<label class="namebox">' + av(i) + '<input data-v="' + i + '" value="' + esc(S.venmo[i] || "") + '" maxlength="30" placeholder="' + esc(nm(i)) + '\'s Venmo" autocapitalize="off" autocomplete="off" aria-label="Venmo username for ' + esc(nm(i)) + '"></label>';
+    }
+    $("#s1").innerHTML = '<div class="sh"><span class="num">1</span><h2>Who\'s here?</h2></div><p class="say">Pick how many people, then type their names.</p>' +
+      '<div class="card"><div class="pp"><div class="stepper"><button class="round" id="minus" aria-label="One less person"' + (S.n <= 1 ? " disabled" : "") + '>−</button><div class="num-big" id="count">' + S.n +
+      '</div><button class="round" id="plus" aria-label="One more person"' + (S.n >= 12 ? " disabled" : "") + '>+</button></div><div class="ppl">people' + (bills[cur].kind === "james" ? "<br>(the receipt says 4)" : "") + "</div></div>" +
+      '<div class="names">' + boxes + "</div>" +
+      '<button class="linkbtn" id="venmoToggle" style="margin-top:8px">' + (S.showVenmo ? "Hide Venmo usernames" : "Add Venmo usernames (optional)") + "</button>" +
+      (S.showVenmo ? '<p class="hint" style="margin:2px 0 8px">Pay links get added to "Who pays who" and the text you send.</p><div class="names" style="margin-top:0">' + vrows + "</div>" : "") + "</div>";
   }
   function setCount(n) {
     n = Math.max(1, Math.min(12, n)); if (n === S.n) return;
     while (S.names.length < n) S.names.push("");
-    S.n = n; if (S.shareWho !== "all" && S.shareWho >= n) S.shareWho = "all";
+    S.n = n;
+    if (S.shareWho !== "all" && S.shareWho >= n) S.shareWho = "all";
+    if (S.checkPayer >= n) S.checkPayer = 0;
+    if (S.payWho >= n) S.payWho = 0;
     items.forEach(function (it) {
       if (it.paidBy != null && it.paidBy >= n) it.paidBy = null;
-      var ids = sharesOf(it).filter(function (p) { return p < n; });
-      if (ids.length !== sharesOf(it).length) { var v = lr(100, ids.map(function (p) { return it.shares[p]; })), o = {}; ids.forEach(function (p, k) { o[p] = v[k]; }); it.shares = ids.length ? o : {}; }
+      var ids = Object.keys(it.shares).map(Number), keep = ids.filter(function (p) { return p < n; });
+      if (keep.length !== ids.length) { var v = lr(100, keep.map(function (p) { return it.shares[p]; })), o = {}; keep.forEach(function (p, k) { o[p] = v[k]; }); it.shares = keep.length ? o : {}; }
     });
-    renderPeople(); renderDishes(); renderTotals(); paintAll();
-    var c = $("#count"); c && c.classList.add("bump");
+    renderPeople(); renderDishes(); paintAll();
+    var c = $("#count"); if (c) c.classList.add("bump");
   }
 
-  /* ---- dishes ---- */
-  function dishHTML(it) {
-    var chips = "";
-    for (var p = 0; p < S.n; p++) chips += '<button class="chip" data-p="' + p + '" style="--h:' + hue(p) + '" aria-pressed="false">' + av(p) + '<span class="t">' + esc(nm(p)) + "</span></button>";
-    if (S.n > 1) chips += '<button class="chip all" data-all="1" aria-pressed="false">Everyone</button>';
-    return '<article class="card dish" id="dish' + it.id + '" data-id="' + it.id + '"><div class="dhead"><div class="dname">' + esc(it.name) + (it.qty > 1 ? '<span class="qty">×' + it.qty + "</span>" : "") + '<span class="ptag" hidden></span>' +
-      '</div><div class="dright"><div class="dprice">' + money(it.price) + '</div><button class="del" data-del="1" aria-label="Remove ' + esc(it.name) + '">×</button></div></div><div class="chips">' + chips + '</div><div class="split"></div></article>';
-  }
-  function splitHTML(it) {
-    var ids = sharesOf(it).sort(function (a, b) { return a - b; });
-    if (!ids.length) return '<div class="sline warn"><span>Tap who had this</span></div>';
-    var bar = '<div class="bar">' + ids.map(function (p) { return '<i data-bp="' + p + '" style="--h:' + hue(p) + ';width:' + it.shares[p] + '%"></i>'; }).join("") + "</div>";
-    if (ids.length === 1) return bar + '<div class="sline"><span>All ' + esc(nm(ids[0])) + "</span><span>" + money(it.price) + "</span></div>";
-    var even = ids.every(function (p) { return Math.abs(it.shares[p] - 100 / ids.length) < 1; });
-    var sl = it.open ? '<div class="sliders">' + ids.map(function (p) {
-      return '<div class="srow"><div class="lab">' + av(p) + "<span>" + esc(nm(p)) + '</span><span class="pc" data-pc="' + p + '">' + it.shares[p] + '%</span><span class="am" data-am="' + p + '">' + money(it.price * it.shares[p] / 100) + "</span></div>" +
-        '<input type="range" min="0" max="100" step="1" value="' + it.shares[p] + '" data-sl="' + p + '" style="--c:hsl(' + hue(p) + ' var(--ps) var(--pl));--p:' + it.shares[p] + '%" aria-label="' + esc(nm(p)) + ' share of ' + esc(it.name) + '"></div>';
-    }).join("") + '<button class="linkbtn" data-even="1" style="justify-self:start">Reset to even split</button></div>' : "";
-    return bar + '<div class="sline"><span>' + (even ? "Even split · " + Math.round(100 / ids.length) + "% each" : "Custom split") + '</span><button class="linkbtn" data-open="1">' + (it.open ? "Done" : "Adjust split") + "</button></div>" + sl;
-  }
-  function payHTML(it) {
-    if (it.paidBy == null && !it.payOpen) return '<div class="sline" style="margin-top:2px"><span></span><button class="linkbtn" data-payopen="1">Already paid by someone?</button></div>';
-    var chips = "<span>Paid by</span>"; for (var p = 0; p < S.n; p++) chips += '<button class="chip" data-pay="' + p + '" style="--h:' + hue(p) + '" aria-pressed="' + (it.paidBy === p) + '">' + av(p) + '<span class="t">' + esc(nm(p)) + "</span></button>";
-    return '<div class="paidrow">' + chips + (it.paidBy == null ? '<button class="linkbtn" data-payhide="1">Cancel</button>' : "") + "</div>" +
-      (it.paidBy != null ? '<div class="hint" style="margin-top:6px">' + esc(nm(it.paidBy)) + " already paid " + money(it.price) + ". It comes off what " + esc(nm(it.paidBy)) + " owes on the rest of the bill.</div>" : "");
-  }
-  function paintDish(it) {
-    var el = $("#dish" + it.id); if (!el) return;
-    $(".split", el).innerHTML = splitHTML(it) + payHTML(it);
-    var pt = $(".ptag", el); pt.hidden = it.paidBy == null; if (it.paidBy != null) pt.textContent = "Paid by " + nm(it.paidBy);
-    el.classList.toggle("done", sharesOf(it).length > 0);
-    $$(".chip[data-p]", el).forEach(function (c) { c.setAttribute("aria-pressed", it.shares[+c.dataset.p] != null); });
-    var all = $(".chip.all", el); if (all) all.setAttribute("aria-pressed", sharesOf(it).length === S.n);
-  }
+  /* ================= 2. who ate what ================= */
+  var sampleFn = null, canImages = false, dlFn = null, scanCtl = null;
   function renderDishes() {
-    $("#sDishes").innerHTML = '<div class="sh"><h2>Who had what?</h2><span class="hint">Tap names. Shared dishes split evenly.</span></div>' +
+    $("#s2").innerHTML = '<div class="sh"><span class="num">2</span><h2>Who ate what?</h2></div><p class="say">Tap the names of everyone who had each thing. Sharing? Tap more than one name.</p>' +
+      '<div class="tools">' +
+        '<label class="toolbtn primaryish" id="scanBtn"' + (canImages ? "" : " hidden") + '>' + ICON.cam + 'Scan a receipt<input type="file" id="scanFile" accept="image/jpeg,image/png,image/webp,image/gif" hidden></label>' +
+        '<button class="toolbtn" id="evenAll">Split everything evenly</button><button class="toolbtn" id="clearAll">Clear all</button></div>' +
+      '<p class="scanmsg" id="scanMsg" hidden></p>' +
       '<div class="progress"><div class="row"><b id="pcount"></b><span id="pleft"></span></div><div class="track"><div class="fill" id="pfill"></div></div></div>' +
       '<div class="stack" id="dishList"></div>' +
-      '<div class="card stack" id="addCard" style="margin-top:12px"><p class="sec" style="margin:0">Add an item</p>' +
-      '<input class="textin" id="addName" placeholder="Item name (optional)" maxlength="40" autocomplete="off" enterkeyhint="next">' +
-      '<div class="addrow2"><div class="money"><span>$</span><input id="addPrice" inputmode="decimal" placeholder="Price" enterkeyhint="done"></div><div class="qtybox"><label for="addQty">Qty</label><input id="addQty" inputmode="numeric" value="1"></div></div>' +
-      '<button class="primary" id="addBtn">Add item</button><p class="hint" id="addMsg" style="margin:0">Price is the total for the whole quantity.</p></div>';
+      '<div class="card stack" id="addCard" style="margin-top:12px"><p class="q" style="margin:0">Add something</p>' +
+        '<input class="textin" id="addName" placeholder="What was it? (optional)" maxlength="40" autocomplete="off" enterkeyhint="next">' +
+        '<div class="addrow2"><div class="money"><span>$</span><input id="addPrice" inputmode="decimal" placeholder="Price" enterkeyhint="done"></div><div class="qtybox"><label for="addQty">How many</label><input id="addQty" inputmode="numeric" value="1"></div></div>' +
+        '<button class="primary" id="addBtn">Add it</button><p class="hint" id="addMsg" style="margin:0">Price is the total for all of them.</p></div>';
     renderDishList();
   }
   function renderDishList() {
     var el = $("#dishList"); if (!el) return;
-    el.innerHTML = items.length ? items.map(dishHTML).join("") : '<div class="card empty">No items yet. Add the first one below.</div>';
+    el.innerHTML = items.length ? items.map(dishHTML).join("") : '<div class="card empty">Nothing here yet. Add the first thing below' + (canImages ? ", or scan a receipt." : ".") + "</div>";
     items.forEach(paintDish);
   }
-  function addItem() {
-    var msg = $("#addMsg"), price = parseMoney($("#addPrice").value), qty = Math.max(1, Math.min(99, parseInt($("#addQty").value, 10) || 1));
-    if (price <= 0) { msg.style.color = "var(--warn)"; msg.textContent = "Enter a price above $0.00."; $("#addPrice").focus(); return; }
-    var b = bills[cur], name = $("#addName").value.trim() || "Item " + (items.length + 1);
-    items.push({ id: b.next++, name: name.slice(0, 40), qty: qty, price: price, shares: {}, open: false, paidBy: null });
-    $("#addName").value = ""; $("#addPrice").value = ""; $("#addQty").value = "1";
-    msg.style.color = "var(--ok)"; msg.textContent = "Added " + name + ". Tap names above to assign it.";
-    renderDishList(); paintAll();
-    var nm_ = $("#addName"); if (nm_) nm_.focus({ preventScroll: true });
-    $("#addCard").scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+  function dishHTML(it) {
+    if (it._edit) {
+      return '<article class="card dish" id="dish' + it.id + '" data-id="' + it.id + '"><div class="editgrid"><p class="q" style="margin:0">Change this item</p>' +
+        '<input class="textin" id="ed-name-' + it.id + '" value="' + esc(it.name) + '" maxlength="40" aria-label="Item name">' +
+        '<div class="addrow2"><div class="money"><span>$</span><input id="ed-price-' + it.id + '" inputmode="decimal" value="' + (it.price / 100).toFixed(2) + '" aria-label="Price"></div><div class="qtybox"><label for="ed-qty-' + it.id + '">How many</label><input id="ed-qty-' + it.id + '" inputmode="numeric" value="' + it.qty + '"></div></div>' +
+        '<div class="btnrow"><button class="ghost" data-edcancel="1">Cancel</button><button class="primary" data-edsave="1">Save</button></div></div></article>';
+    }
+    var chips = "";
+    for (var p = 0; p < S.n; p++) chips += '<button class="chip" data-p="' + p + '" style="--h:' + hue(p) + '" aria-pressed="false">' + av(p) + '<span class="t">' + esc(nm(p)) + "</span></button>";
+    if (S.n > 1) chips += '<button class="chip all" data-all="1" aria-pressed="false">Everyone</button>';
+    return '<article class="card dish" id="dish' + it.id + '" data-id="' + it.id + '"><div class="dhead"><div class="dname">' + esc(it.name) + (it.qty > 1 ? '<span class="qty">×' + it.qty + "</span>" : "") + '<span class="ptag" hidden></span></div>' +
+      '<div class="dright"><div class="dprice">' + money(it.price) + '</div><button class="icon" data-edit="1" aria-label="Change ' + esc(it.name) + '">' + ICON.edit + '</button><button class="icon" data-del="1" aria-label="Remove ' + esc(it.name) + '">' + ICON.del + "</button></div></div>" +
+      '<div class="chips">' + chips + '</div><div class="split"></div></article>';
+  }
+  function amtsHTML(it, sp) {
+    var ids = sharesOf(it);
+    return ids.map(function (p) { return "<span>" + dot(p) + esc(nm(p)) + " <b>" + money(sp[p]) + "</b>" + (ids.length > 1 ? "<small>" + it.shares[p] + "%</small>" : "") + "</span>"; }).join("");
+  }
+  function splitHTML(it) {
+    var ids = sharesOf(it);
+    if (!ids.length) return '<div class="sline warn"><span>Who had this? Tap a name.</span></div>';
+    var sp = itemSplit(it);
+    var bar = '<div class="bar">' + ids.map(function (p) { return '<i data-bp="' + p + '" style="--h:' + hue(p) + ';width:' + it.shares[p] + '%"></i>'; }).join("") + "</div>";
+    var amts = '<div class="amts">' + amtsHTML(it, sp) + "</div>";
+    if (ids.length === 1) return bar + amts;
+    var sl = it.open ? '<div class="sliders">' + ids.map(function (p) {
+      return '<div class="srow"><div class="lab">' + av(p) + "<span>" + esc(nm(p)) + '</span><span class="pc" data-pc="' + p + '">' + it.shares[p] + '%</span><span class="am" data-am="' + p + '">' + money(sp[p]) + "</span></div>" +
+        '<input type="range" min="0" max="100" step="1" value="' + it.shares[p] + '" data-sl="' + p + '" style="--c:hsl(' + hue(p) + ' var(--ps) var(--pl));--p:' + it.shares[p] + '%" aria-label="' + esc(nm(p)) + ' share of ' + esc(it.name) + '"></div>';
+    }).join("") + '<button class="linkbtn" data-even="1" style="justify-self:start">Make it even again</button></div>' : "";
+    return bar + amts + '<div class="sline"><span></span><button class="linkbtn" data-open="1">' + (it.open ? "Done" : "Change how it's split") + "</button></div>" + sl;
+  }
+  function paintDish(it) {
+    var el = $("#dish" + it.id); if (!el || it._edit) return;
+    $(".split", el).innerHTML = splitHTML(it);
+    var pt = $(".ptag", el); pt.hidden = it.paidBy == null; if (it.paidBy != null) pt.textContent = "Paid by " + nm(it.paidBy);
+    el.classList.toggle("done", sharesOf(it).length > 0);
+    $$(".chip[data-p]", el).forEach(function (c) { c.setAttribute("aria-pressed", it.shares[+c.dataset.p] != null); });
+    var all = $(".chip.all", el); if (all) all.setAttribute("aria-pressed", sharesOf(it).length === S.n);
   }
   function setShare(it, p, v) {
     var ids = sharesOf(it).filter(function (x) { return x !== p; }); v = Math.max(0, Math.min(100, Math.round(v)));
@@ -448,102 +569,236 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   }
   function syncSliders(it) {
     var el = $("#dish" + it.id); if (!el) return;
+    var sp = itemSplit(it);
     sharesOf(it).forEach(function (p) {
       var s = $('[data-sl="' + p + '"]', el), pc = $('[data-pc="' + p + '"]', el), am = $('[data-am="' + p + '"]', el), b = $('[data-bp="' + p + '"]', el);
       if (s && document.activeElement !== s) s.value = it.shares[p];
       if (s) s.style.setProperty("--p", it.shares[p] + "%");
       if (pc) pc.textContent = it.shares[p] + "%";
-      if (am) am.textContent = money(it.price * it.shares[p] / 100);
+      if (am) am.textContent = money(sp[p]);
       if (b) b.style.width = it.shares[p] + "%";
     });
+    var amts = $(".amts", el); if (amts) amts.innerHTML = amtsHTML(it, sp);
+  }
+  function addItem() {
+    var msg = $("#addMsg"), price = parseMoney($("#addPrice").value), qty = Math.max(1, Math.min(99, parseInt($("#addQty").value, 10) || 1));
+    if (price <= 0) { msg.style.color = "var(--warn)"; msg.textContent = "Type a price first."; $("#addPrice").focus(); return; }
+    var b = bills[cur], name = $("#addName").value.trim() || "Item " + (items.length + 1);
+    items.push({ id: b.next++, name: name.slice(0, 40), qty: qty, price: price, shares: {}, open: false, paidBy: null });
+    $("#addName").value = ""; $("#addPrice").value = ""; $("#addQty").value = "1";
+    msg.style.color = "var(--ok)"; msg.textContent = "Added " + name + ". Now tap who had it.";
+    renderDishList(); paintAll();
+    $("#addName").focus({ preventScroll: true });
+    $("#addCard").scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+  }
+  function jumpUnassigned() {
+    var it = items.filter(function (x) { return !sharesOf(x).length; })[0]; if (!it) return;
+    var el = $("#dish" + it.id); if (!el) return;
+    el.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+    el.classList.add("flash"); setTimeout(function () { el.classList.remove("flash"); }, 1400);
   }
 
-  /* ---- who already paid ---- */
-  var payWho = 0;
-  function renderPaid() {
-    var el = $("#sPaid"); if (!el) return;
-    if (payWho >= S.n) payWho = 0;
-    var c = compute(), chips = "";
-    for (var i = 0; i < S.n; i++) chips += '<button class="chip" data-paywho="' + i + '" style="--h:' + hue(i) + '" aria-pressed="' + (payWho === i) + '">' + av(i) + '<span class="t">' + esc(nm(i)) + "</span>" + (c.credit[i] ? '<span class="mono">' + money(c.credit[i]) + "</span>" : "") + "</button>";
+  /* receipt scan: asks Claude to read the photo */
+  async function scanReceipt(file) {
+    var msg = $("#scanMsg"); msg.hidden = false; msg.style.color = ""; msg.textContent = "Reading your receipt… this can take up to a minute.";
+    scanCtl = new AbortController();
+    var prompt = "This image is a photo of a restaurant or store receipt. Read every purchased line item.\n" +
+      'Reply with only JSON in exactly this shape: {"title": "store name or empty string", "items": [{"name": "Burger", "qty": 1, "price": 29.00}], "tax": 4.50, "tip": 0, "subtotal": 120.00}\n' +
+      "Rules: price is the line total in dollars for that line (not the per-unit price). List add-ons that have their own price (like 'Add Chicken') as separate items. " +
+      "Do not list subtotal, tax, tip, service charge, total, payments, or change as items. Use 0 for tax or tip when not printed. Use null for subtotal when not printed. Keep item names short and readable.";
+    try {
+      var r = await sampleFn.json(prompt, { images: [file], signal: scanCtl.signal });
+      var got = (r && Array.isArray(r.items) ? r.items : []).map(function (x) {
+        x = x || {};
+        return { name: String(x.name || "").trim().slice(0, 40), qty: Math.max(1, Math.min(99, Math.round(+x.qty) || 1)), price: Math.round((+x.price || 0) * 100) };
+      }).filter(function (x) { return x.name && x.price > 0; });
+      if (!got.length) { msg.style.color = "var(--warn)"; msg.textContent = "I couldn't find any items in that photo. Try a sharper, closer picture."; return; }
+      var b = bills[cur];
+      if (b.items.length && bills.length >= 8) { msg.style.color = "var(--warn)"; msg.textContent = "You have 8 bills. Delete one first, then scan again."; return; }
+      snap("Receipt added.");
+      if (b.items.length) { // keep the current bill; the scan gets its own bill
+        var nb = newBill("manual", String(r.title || "").trim().slice(0, 28) || "Scanned bill", nextBillId++); nb.S.n = S.n; nb.S.names = S.names.slice(); nb.S.venmo = S.venmo.slice();
+        bills.push(nb); cur = bills.length - 1; bind(); b = nb;
+      } else if (r.title && /^Bill \d+$/.test(b.title)) b.title = String(r.title).trim().slice(0, 28);
+      got.forEach(function (x) { b.items.push({ id: b.next++, name: x.name, qty: x.qty, price: x.price, shares: {}, open: false, paidBy: null }); });
+      S.taxCents = Math.max(0, Math.round((+r.tax || 0) * 100));
+      var tipC = Math.max(0, Math.round((+r.tip || 0) * 100)); if (tipC) { S.tipMode = "amt"; S.tipAmtCents = tipC; }
+      renderAll();
+      var m2 = $("#scanMsg"), total = subtotal(), printed = r.subtotal != null && isFinite(+r.subtotal) ? Math.round(+r.subtotal * 100) : null;
+      m2.hidden = false;
+      if (printed != null && Math.abs(printed - total) > 1) { m2.style.color = "var(--warn)"; m2.textContent = "Added " + got.length + " items (" + money(total) + "), but the receipt says " + money(printed) + ". Check the items against the receipt."; }
+      else { m2.style.color = "var(--ok)"; m2.textContent = "Added " + got.length + " items (" + money(total) + "). Give them a quick check against the receipt."; }
+    } catch (e) {
+      if (e && e.code === "cancelled") { msg.hidden = true; return; }
+      var c = e && e.code, why = {
+        not_granted: "Scanning needs permission to use Claude. You can still type items in.", sampling_disabled: "Scanning isn't available on this account. You can still type items in.",
+        rate_limited: "Too many scans right now. Try again in a little while.", image_rejected: "That photo didn't work. Try a JPG or PNG picture.",
+        invalid_json: "I couldn't read that receipt clearly. Try a sharper, closer picture.", images_unavailable: "This view can't send photos. You can still type items in."
+      }[c] || "Something went wrong reading the receipt. Try again.";
+      msg.style.color = "var(--warn)"; msg.textContent = why;
+      if (c === "not_granted" || c === "sampling_disabled" || c === "images_unavailable") { canImages = false; var sb = $("#scanBtn"); if (sb) sb.hidden = true; }
+    } finally { scanCtl = null; var f = $("#scanFile"); if (f) f.value = ""; }
+  }
+
+  /* ================= 3. who paid ================= */
+  function renderPaid(c) {
+    var el = $("#s3"); if (!el) return;
+    var who = S.payWho, chipsA = "", chipsB = "";
+    for (var i = 0; i < S.n; i++) {
+      chipsA += '<button class="chip" data-payer="' + i + '" style="--h:' + hue(i) + '" aria-pressed="' + (S.checkPayer === i) + '">' + av(i) + '<span class="t">' + esc(nm(i)) + "</span></button>";
+      chipsB += '<button class="chip" data-paywho="' + i + '" style="--h:' + hue(i) + '" aria-pressed="' + (who === i) + '">' + av(i) + '<span class="t">' + esc(nm(i)) + "</span>" + (c.credit[i] ? '<span class="mono">' + money(c.credit[i]) + "</span>" : "") + "</button>";
+    }
+    chipsA += '<button class="chip all nobody" data-payer="-1" aria-pressed="' + (S.checkPayer === -1) + '">Nobody yet</button>';
     var rows = items.map(function (it) {
-      var other = it.paidBy != null && it.paidBy !== payWho ? "<small>Paid by " + esc(nm(it.paidBy)) + "</small>" : "";
-      return '<button class="payrow" data-payitem="' + it.id + '" aria-pressed="' + (it.paidBy === payWho) + '"><span class="box">✓</span><span class="pn">' + esc(it.name) + (it.qty > 1 ? " ×" + it.qty : "") + other + '</span><span class="pa">' + money(it.price) + "</span></button>";
+      var other = it.paidBy != null && it.paidBy !== who ? "<small>Paid by " + esc(nm(it.paidBy)) + "</small>" : "";
+      return '<button class="payrow" data-payitem="' + it.id + '" aria-pressed="' + (it.paidBy === who) + '"><span class="box">✓</span><span class="pn">' + esc(it.name) + (it.qty > 1 ? " ×" + it.qty : "") + other + '</span><span class="pa">' + money(it.price) + "</span></button>";
     }).join("");
-    var mine = items.filter(function (it) { return it.paidBy === payWho; });
-    var sum = mine.length ? esc(nm(payWho)) + " paid " + money(c.credit[payWho]) + " (" + mine.length + (mine.length === 1 ? " item" : " items") + "). That comes off what " + esc(nm(payWho)) + " owes on the rest of the bill." : "Tap the items " + esc(nm(payWho)) + " already paid for. Everyone still owes their share; the payer just gets credit.";
-    el.innerHTML = '<div class="sh"><h2>Who already paid?</h2><span class="hint">Optional</span></div><div class="card stack"><div class="chips">' + chips + "</div>" +
-      (items.length ? '<div class="paylist">' + rows + "</div>" : '<div class="empty" style="padding:6px">Add items first.</div>') + '<div class="hint">' + sum + "</div></div>";
+    var payerLine = S.checkPayer === -1
+      ? "Nobody has paid yet. Everyone puts money in at the table, and the server gets " + money(c.remaining) + "."
+      : esc(nm(S.checkPayer)) + " paid " + money(c.remaining) + (c.paidTotal ? ": the bill minus the " + money(c.paidTotal) + " already paid separately." : ", the whole bill.") + " Everyone else pays " + esc(nm(S.checkPayer)) + " back for their part.";
+    var mine = items.filter(function (it) { return it.paidBy === who; });
+    el.innerHTML = '<div class="sh"><span class="num">3</span><h2>Who paid?</h2></div><p class="say">Who handed over their card, and did anyone pay for something on their own?</p>' +
+      '<div class="card stack"><p class="q" style="margin:0">Who paid the bill?</p><div class="chips">' + chipsA + '</div><div class="explain">' + payerLine + "</div></div>" +
+      '<div class="card stack" style="margin-top:12px"><p class="q" style="margin:0">Did anyone pay for something on their own? <span class="hint" style="font-weight:400">(like a bar tab)</span></p>' +
+      '<div class="chips">' + chipsB + "</div>" +
+      (items.length ? '<p class="hint" style="margin:0">Tap what ' + esc(nm(who)) + " paid for:</p>" + '<div class="paylist">' + rows + "</div>" : '<div class="empty" style="padding:6px">Add items first.</div>') +
+      '<div class="explain">' + (mine.length ? esc(nm(who)) + " already paid " + money(c.credit[who]) + ". Everyone still pays their part of " + (mine.length === 1 ? "it" : "those") + ", and " + esc(nm(who)) + " gets that money back." : "Nothing marked for " + esc(nm(who)) + ". Skip this if nobody paid for anything separately.") + "</div></div>";
   }
 
-  /* ---- tip & tax ---- */
+  /* ================= 4. tip & tax ================= */
   function renderTip() {
     var pre = [0, 15, 18, 20, 25].map(function (v) { return '<button data-pct="' + v + '" aria-pressed="' + (S.tipMode === "pct" && S.tipPct === v) + '">' + (v ? v + "%" : "None") + "</button>"; }).join("");
-    $("#sTip").innerHTML = '<div class="sh"><h2>Tip and tax</h2><span class="hint">' + (bills[cur].kind === "james" ? "No tip on the receipt" : "Optional") + '</span></div>' +
-      '<div class="card stack"><div class="tiprow"><div><div class="hint" style="margin-bottom:4px">Tip</div><div class="big" id="tipbig"></div></div><div class="tipnote" id="tipnote"></div></div>' +
-      '<div class="presets" id="presets">' + pre + '</div>' +
-      '<div class="field"><label for="tipamt">Or enter an exact tip</label><div class="money"><span>$</span><input id="tipamt" inputmode="decimal" placeholder="0.00" value="' + (S.tipMode === "amt" ? (S.tipAmtCents / 100).toFixed(2) : "") + '"></div></div><hr>' +
-      '<div class="field"><label for="taxamt">Tax on receipt <span id="taxrate" style="font-family:var(--f-mono)"></span></label><div class="money"><span>$</span><input id="taxamt" inputmode="decimal" value="' + (S.taxCents / 100).toFixed(2) + '"></div></div><hr>' +
-      '<button class="switch" role="switch" id="swTax" aria-checked="' + S.taxFollows + '"><span class="txt"><b>Tax follows what each person ate</b><small id="swTaxS"></small></span><span class="tg"></span></button>' +
-      '<button class="switch" role="switch" id="swTip" aria-checked="' + S.tipFollows + '"><span class="txt"><b>Tip follows what each person ate</b><small id="swTipS"></small></span><span class="tg"></span></button></div>';
+    $("#s4").innerHTML = '<div class="sh"><span class="num">4</span><h2>Tip and tax</h2></div><p class="say">' + (bills[cur].kind === "james" ? "There's no tip on this receipt, so add it here." : "Add the tip and tax from the receipt.") + "</p>" +
+      '<div class="card stack"><div class="tiprow"><div><p class="sec" style="margin-bottom:4px">Tip</p><div class="big" id="tipbig"></div></div><div class="hint" id="tipnote"></div></div>' +
+      '<div class="presets" id="presets">' + pre + "</div>" +
+      '<div class="field"><label for="tipamt">Or type the exact tip</label><div class="money"><span>$</span><input id="tipamt" inputmode="decimal" placeholder="0.00" value="' + (S.tipMode === "amt" ? (S.tipAmtCents / 100).toFixed(2) : "") + '"></div></div>' +
+      '<button class="switch" role="switch" id="swTipTax" aria-checked="' + S.tipOnTax + '"><span class="txt"><b>Tip on the total with tax</b><small>Off: the % is figured before tax (most common).</small></span><span class="tg"></span></button><hr>' +
+      '<div class="field"><label for="taxamt">Tax on the receipt <span id="taxrate" style="font-family:var(--f-mono)"></span></label><div class="money"><span>$</span><input id="taxamt" inputmode="decimal" value="' + (S.taxCents / 100).toFixed(2) + '"></div></div><hr>' +
+      '<button class="switch" role="switch" id="swTax" aria-checked="' + S.taxFollows + '"><span class="txt"><b>Tax: bigger orders pay more</b><small id="swTaxS"></small></span><span class="tg"></span></button>' +
+      '<button class="switch" role="switch" id="swTip" aria-checked="' + S.tipFollows + '"><span class="txt"><b>Tip: bigger orders pay more</b><small id="swTipS"></small></span><span class="tg"></span></button></div>';
   }
-  function paintTip() {
-    var c = compute();
+  function paintTip(c) {
+    if (!$("#tipbig")) return;
     $("#tipbig").textContent = money(c.tip);
-    $("#tipnote").textContent = S.tipMode === "amt" ? (c.sub ? "That's " + (c.tip / c.sub * 100).toFixed(1) + "% of the " + money(c.sub) + " pre-tax subtotal" : "") : "% is figured on the " + money(c.sub) + " pre-tax subtotal";
-    $("#swTaxS").textContent = S.taxFollows ? "Bigger plates pay more tax. Turn off to split evenly." : "Tax is split evenly between everyone.";
-    $("#swTipS").textContent = S.tipFollows ? "Bigger plates pay more tip. Turn off to split evenly." : "Tip is split evenly between everyone.";
+    var base = c.sub + (S.tipOnTax ? c.tax : 0);
+    $("#tipnote").textContent = base ? "That's " + (c.tip / base * 100).toFixed(1) + "% of " + money(base) : "";
+    $("#swTaxS").textContent = S.taxFollows ? "On. Turn off to split tax the same for everyone." : "Off. Everyone pays the same tax.";
+    $("#swTipS").textContent = S.tipFollows ? "On. Turn off to split the tip the same for everyone." : "Off. Everyone pays the same tip.";
     $("#taxrate").textContent = c.sub ? "(" + (S.taxCents / c.sub * 100).toFixed(2).replace(/\.?0+$/, "") + "%)" : "";
   }
 
-  /* ---- totals ---- */
-  function renderTotals() {
-    var cards = ""; for (var i = 0; i < S.n; i++)
-      cards += '<div class="card pcard" style="--h:' + hue(i) + ';animation-delay:' + (i * 60) + 'ms">' + av(i, "lg") + '<div class="who" data-who="' + i + '">' + esc(nm(i)) + '</div><div class="olbl" data-olbl="' + i + '">owes</div><div class="owes" data-own="' + i + '">$0.00</div><div class="brk" data-brk="' + i + '"></div><button class="mini" data-copyp="' + i + '">Copy ' + esc(nm(i)) + '\'s breakdown</button></div>';
-    $("#sTotals").innerHTML = '<div class="sh"><h2>What everyone owes</h2></div><div class="tgrid">' + cards + '</div>' +
-      '<div class="card" style="margin-top:12px"><div class="check"><span>Food</span><b id="cFood"></b></div><div class="check"><span>Tax</span><b id="cTax"></b></div><div class="check"><span>Tip</span><b id="cTip"></b></div><div class="check" id="cPaidRow" hidden><span>Already paid upfront</span><b id="cPaid"></b></div><div class="check" id="cRow"><span id="cLbl"></span><b id="cVal"></b></div></div>' +
-      '<div style="margin-top:16px"><button class="primary" id="copy">Copy full breakdown for everyone</button><p class="hint" style="margin:8px 0 6px">Includes each dish, their percentage, and tax and tip. Paste it into your group text.</p><pre class="copybox" id="preview"></pre></div>' +
-      '<div class="card stack" style="margin-top:16px"><div><p class="sec" style="margin:0 0 4px">Share as a picture</p><p class="hint" style="margin:0">Shows every dish with color bars for each person\'s percentage.</p></div><div class="chips" id="shareChips"></div><img id="shareimg" alt="Itemized breakdown picture" style="width:100%;border-radius:14px;border:1px solid var(--line);display:block"><button class="primary" id="copyimg">Copy picture</button><p class="hint" id="imgnote" style="margin:0">If copying is blocked, press and hold the picture, then tap Copy or Save.</p></div>';
+  /* ================= 5. who pays who ================= */
+  function venmoLink(to, amt) {
+    if (typeof to !== "number" || !S.venmo[to]) return "";
+    return "https://venmo.com/?txn=pay&audience=private&recipients=" + encodeURIComponent(S.venmo[to]) + "&amount=" + (amt / 100).toFixed(2) + "&note=" + encodeURIComponent(billHead(false));
   }
-  function pct(v) { return v + "%"; }
-  function personLines(c, i) {
-    var l = [nm(i).toUpperCase() + (c.net[i] < 0 ? " gets back " : " owes ") + money(Math.abs(c.net[i]))];
+  function renderSettle() {
+    $("#s5").innerHTML = '<div class="sh"><span class="num">5</span><h2>Who pays who</h2></div><p class="say">This is the answer. Each line is one payment to make.</p>' +
+      '<div id="xferWarn"></div><div class="stack" id="xfers"></div>' +
+      '<button class="switch" role="switch" id="swRound" aria-checked="' + S.roundUp + '" style="margin-top:12px"><span class="txt"><b>Round up to whole dollars</b><small>Easier to pay. The person being paid gets a few cents extra.</small></span><span class="tg"></span></button>' +
+      '<p class="q" style="margin:22px 0 10px">Everyone\'s total <span class="hint" style="font-weight:400">· tap a name to see their receipt</span></p><div class="stack" id="people"></div>' +
+      '<div class="card" style="margin-top:12px"><div class="check"><span>Food</span><b id="cFood"></b></div><div class="check"><span>Tax</span><b id="cTax"></b></div><div class="check"><span>Tip</span><b id="cTip"></b></div>' +
+        '<div class="check"><span style="color:var(--ink);font-weight:700">Whole bill</span><b id="cGrand"></b></div><div class="check" id="cPaidRow" hidden><span>Paid separately</span><b id="cPaid"></b></div></div>' +
+      '<p class="q" style="margin:24px 0 10px">Send it to your friends</p>' +
+      '<div class="card stack"><button class="primary" id="copy">Copy the full breakdown</button><p class="hint" style="margin:0">Every item with what each person owes for it, then who pays who. Paste it in your group text.</p><pre class="copybox" id="preview"></pre></div>' +
+      '<div class="card stack" style="margin-top:12px"><p class="q" style="margin:0">Or send a picture</p><div class="chips" id="shareChips"></div><img id="shareimg" alt="Picture of the breakdown">' +
+        '<div class="btnrow"><button class="primary" id="copyimg">Copy picture</button><button class="ghost" id="saveimg"' + (dlFn ? "" : " hidden") + '>Save to phone</button></div><p class="hint" id="imgnote" style="margin:0">If copying doesn\'t work, press and hold the picture, then tap Copy or Save.</p></div>';
+  }
+  function paintSettle(c) {
+    if (!$("#xfers")) return;
+    $("#xferWarn").innerHTML = !items.length ? '<div class="warnbox">Add what you ordered in step 2 first.</div>' : !c.all ? '<div class="warnbox" style="margin-bottom:12px">' + money(c.unassigned) + ' of food doesn\'t have a name yet, so these numbers aren\'t final. <button class="linkbtn" data-jump="1" style="color:inherit;text-decoration:underline">Show me</button></div>' : "";
+    var xs = c.xfers.filter(function (x) { return x.amt >= 1; });
+    $("#xfers").innerHTML = !items.length ? "" : xs.length ? xs.map(function (x, k) {
+      var a = shownAmt(x.amt), link = venmoLink(x.to, a);
+      return '<div class="card xfer" style="animation-delay:' + k * 60 + 'ms">' + av(x.from, "lg") + '<span class="arrow">→</span>' + (x.to === "table" ? '<span class="av lg" style="--h:220;background:var(--surface-2);color:var(--ink)">$</span>' : av(x.to, "lg")) + "<span></span>" +
+        '<div class="words"><span><strong>' + esc(nm(x.from)) + "</strong> pays <strong>" + esc(nm(x.to)) + "</strong></span><b>" + money(a) + "</b></div>" +
+        (link ? '<div class="venmo"><a href="' + esc(link) + '" target="_blank" rel="noopener">Pay ' + esc(nm(x.to)) + " on Venmo</a></div>" : "") + "</div>";
+    }).join("") : '<div class="card allsquare">Everyone is all square. Nobody owes anything.</div>';
+    $("#people").innerHTML = c.share.map(function (s, i) {
+      var b = c.bal[i], back = b < 0;
+      return '<button class="person" data-sheet="' + i + '">' + av(i, "lg") + '<span style="min-width:0"><span class="nm">' + esc(nm(i)) + '</span><span class="sub">share ' + money(s) + (c.paid[i] ? " · paid " + money(c.paid[i]) : "") + "</span></span>" +
+        '<span class="bal' + (back ? " back" : "") + '"><small>' + (Math.abs(b) < 1 ? "all square" : back ? "gets back" : "pays") + '</small><b data-own="' + i + '"></b></span></button>';
+    }).join("");
+    c.bal.forEach(function (b, i) { tween($('[data-own="' + i + '"]'), "own" + i, Math.abs(b)); });
+    $("#cFood").textContent = money(c.sub); $("#cTax").textContent = money(c.tax); $("#cTip").textContent = money(c.tip); $("#cGrand").textContent = money(c.grand);
+    $("#cPaidRow").hidden = !c.paidTotal; $("#cPaid").textContent = money(c.paidTotal);
+    $("#preview").textContent = summaryText(c);
+  }
+
+  /* ================= person sheet ================= */
+  function openSheet(i) {
+    var c = compute(), b = c.bal[i], back = b < 0, rows = "";
     items.forEach(function (it) {
-      var v = it.shares[i]; if (v == null || it.shares[i] === 0) return;
-      l.push("  • " + it.name + (it.qty > 1 ? " ×" + it.qty : "") + ": " + pct(v) + " of " + money(it.price) + " = " + money(Math.round(it.price * v / 100)));
+      var sp = itemSplit(it); if (!sp[i]) return;
+      var others = sharesOf(it).filter(function (p) { return p !== i; }).map(function (p) { return esc(nm(p)) + " " + money(sp[p]); }).join(" · ");
+      rows += '<div class="line"><span>' + esc(it.name) + (it.qty > 1 ? " ×" + it.qty : "") + "<small>" + it.shares[i] + "% of " + money(it.price) + (others ? " · " + others : "") + "</small></span><b>" + money(sp[i]) + "</b></div>";
     });
-    l.push("  Food " + money(c.food[i]));
-    l.push("  Tax " + money(c.taxO[i]) + (S.taxFollows ? " (in proportion to food)" : " (split evenly)"));
-    l.push("  Tip " + money(c.tipO[i]) + (S.tipFollows ? " (in proportion to food)" : " (split evenly)"));
-    if (c.credit[i]) l.push("  Already paid upfront -" + money(c.credit[i]) + " (" + items.filter(function (it) { return it.paidBy === i; }).map(function (it) { return it.name; }).join(", ") + ")");
+    var xs = c.xfers.filter(function (x) { return x.amt >= 1 && (x.from === i || x.to === i); }).map(function (x) {
+      return '<div class="line"><span>' + (x.from === i ? "Pay " + esc(nm(x.to)) : esc(nm(x.from)) + " pays you") + "</span><b>" + money(shownAmt(x.amt)) + "</b></div>";
+    }).join("");
+    $("#sheetBody").innerHTML = '<div class="shead">' + av(i, "lg") + "<h3>" + esc(nm(i)) + '</h3><button class="icon" id="closeSheet" aria-label="Close">' + ICON.del + "</button></div>" +
+      '<p class="sec">' + (Math.abs(b) < 1 ? "All square" : back ? "Gets back" : "Pays") + '</p><div class="bigline' + (back ? " back" : "") + '">' + money(Math.abs(b)) + "</div>" +
+      (xs ? '<div class="card" style="margin-bottom:12px">' + xs + "</div>" : "") +
+      '<div class="card"><p class="sec" style="margin-bottom:4px">What ' + esc(nm(i)) + " had</p>" + (rows || '<p class="hint">Nothing assigned yet.</p>') +
+      '<div class="line"><span>Food</span><b>' + money(c.food[i]) + '</b></div><div class="line"><span>Tax</span><b>' + money(c.taxO[i]) + '</b></div><div class="line"><span>Tip</span><b>' + money(c.tipO[i]) + "</b></div>" +
+      '<div class="line"><span><strong>Their share</strong></span><b>' + money(c.share[i]) + "</b></div>" +
+      (c.paid[i] ? '<div class="line"><span>Already paid' + (S.checkPayer === i ? " (the bill" + (c.credit[i] ? " and their own items" : "") + ")" : "") + '</span><b style="color:var(--ok)">-' + money(c.paid[i]) + "</b></div>" : "") + "</div>" +
+      '<button class="primary" data-copyp="' + i + '" style="margin-top:14px">Copy ' + esc(nm(i)) + "'s breakdown</button>";
+    $("#sheet").hidden = false; document.body.style.overflow = "hidden";
+  }
+  function closeSheet() { $("#sheet").hidden = true; document.body.style.overflow = ""; }
+
+  /* ================= text export ================= */
+  function itemLines(it) {
+    var sp = itemSplit(it), ids = sharesOf(it);
+    var who = ids.length ? ids.map(function (p) { return nm(p) + " " + money(sp[p]) + (ids.length > 1 ? " (" + it.shares[p] + "%)" : ""); }).join(" · ") : "not assigned yet";
+    return [it.name + (it.qty > 1 ? " ×" + it.qty : "") + ": " + money(it.price) + (it.paidBy != null ? " (paid by " + nm(it.paidBy) + ")" : ""), "   " + who];
+  }
+  function header(c) {
+    var l = [billHead(false), "Whole bill " + money(c.grand) + " = food " + money(c.sub) + " + tax " + money(c.tax) + " + tip " + money(c.tip)];
+    l.push(S.checkPayer === -1 ? "Nobody has paid the bill yet." : nm(S.checkPayer) + " paid the bill" + (c.paidTotal ? " (" + money(c.remaining) + ")" : "") + ".");
+    for (var i = 0; i < S.n; i++) if (c.credit[i]) l.push(nm(i) + " paid separately for: " + items.filter(function (it) { return it.paidBy === i; }).map(function (it) { return it.name + " " + money(it.price); }).join(", "));
     return l;
   }
-  function header(c) { return [billHead(false), "Bill " + money(c.grand) + " = food " + money(c.sub) + " + tax " + money(c.tax) + " + tip " + money(c.tip) + (c.paidTotal ? ". " + money(c.paidTotal) + " was already paid upfront." : ""), ""]; }
+  function xferLines(c, only) {
+    var xs = c.xfers.filter(function (x) { return x.amt >= 1 && (only == null || x.from === only || x.to === only); });
+    if (!xs.length) return ["  Everyone is all square."];
+    var l = [];
+    xs.forEach(function (x) { var a = shownAmt(x.amt), link = venmoLink(x.to, a); l.push("  • " + nm(x.from) + " pays " + nm(x.to) + " " + money(a)); if (link) l.push("    Venmo: " + link); });
+    return l;
+  }
   function summaryText(c) {
-    var l = header(c);
-    c.totals.forEach(function (v, i) { l = l.concat(personLines(c, i), [""]); });
-    l.push("Quick totals:"); c.net.forEach(function (v, i) { l.push("  " + nm(i) + (v < 0 ? " gets back " : ": ") + money(Math.abs(v))); });
+    var l = header(c).concat(["", "WHO PAYS WHO" + (S.roundUp ? " (rounded up)" : "")], xferLines(c), ["", "EVERY ITEM AND WHO OWES WHAT"]);
+    items.forEach(function (it) { l = l.concat(itemLines(it)); });
+    l.push("", "EACH PERSON");
+    c.share.forEach(function (s, i) {
+      var b = c.bal[i];
+      l.push("  " + nm(i) + ": food " + money(c.food[i]) + " + tax " + money(c.taxO[i]) + " + tip " + money(c.tipO[i]) + " = " + money(s) + (c.paid[i] ? ", already paid " + money(c.paid[i]) : "") + " → " + (Math.abs(b) < 1 ? "all square" : b < 0 ? "gets back " + money(-b) : "pays " + money(b)));
+    });
+    if (!c.all) l.push("", "Note: " + money(c.unassigned) + " of food isn't assigned yet.");
     return l.join("\n");
   }
-  function personText(c, i) { return header(c).concat(personLines(c, i)).join("\n"); }
-  function copyText(txt, btn, label) {
+  function personText(c, i) {
+    var b = c.bal[i], l = [billHead(false), nm(i).toUpperCase() + (Math.abs(b) < 1 ? " is all square" : b < 0 ? " gets back " + money(-b) : " pays " + money(b)), ""];
+    l = l.concat(xferLines(c, i), ["", "What " + nm(i) + " had:"]);
+    items.forEach(function (it) {
+      var sp = itemSplit(it); if (!sp[i]) return;
+      var others = sharesOf(it).filter(function (p) { return p !== i; }).map(function (p) { return nm(p) + " " + money(sp[p]); });
+      l.push("  • " + it.name + (it.qty > 1 ? " ×" + it.qty : "") + " " + money(it.price) + ": " + nm(i) + " " + money(sp[i]) + " (" + it.shares[i] + "%)" + (others.length ? " · " + others.join(" · ") : ""));
+    });
+    l.push("  Food " + money(c.food[i]) + " + tax " + money(c.taxO[i]) + " + tip " + money(c.tipO[i]) + " = " + money(c.share[i]));
+    if (c.paid[i]) l.push("  Already paid -" + money(c.paid[i]));
+    return l.join("\n");
+  }
+  function copyText(txt, btn) {
     var done = function () { var o = btn.textContent; btn.textContent = "Copied!"; setTimeout(function () { btn.textContent = o; }, 1600); };
-    try { navigator.clipboard.writeText(txt).then(done, function () { selectPreview(); }); } catch (err) { selectPreview(); }
+    var sel = function () { var el = $("#preview"); if (!el) return; var r = document.createRange(); r.selectNodeContents(el); var s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Copying is blocked here. The text below is selected."); };
+    try { navigator.clipboard.writeText(txt).then(done, sel); } catch (e) { sel(); }
   }
-  function selectPreview() { var el = $("#preview"); if (!el) return; var r = document.createRange(); r.selectNodeContents(el); var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
 
-
-  /* ---- bills ---- */
-  function renderBills() {
-    var tabs = bills.map(function (b, i) { return '<button class="tab" data-bill="' + i + '" aria-pressed="' + (i === cur) + '">' + esc(b.title || "Bill") + "</button>"; }).join("");
-    $("#sBills").innerHTML = '<div class="tabs" id="tabs">' + tabs + (bills.length < 8 ? '<button class="tab new" id="newBill">+ New bill</button>' : "") + "</div>" +
-      '<div class="billname"><label for="billTitle">Bill name</label><input class="textin" id="billTitle" value="' + esc(bills[cur].title) + '" maxlength="28" placeholder="Name this bill"><button class="linkbtn" id="delBill"' + (bills.length < 2 ? " hidden" : "") + ">Delete bill</button></div>";
-  }
-  function renderAll() { renderBills(); renderPeople(); renderDishes(); renderTip(); renderTotals(); paintAll(); }
-  function goBill(i) { cur = i; bind(); renderAll(); window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" }); }
-
-  /* ---- picture export (drawn on a canvas, light theme so it reads anywhere) ---- */
+  /* ================= picture export ================= */
   var shareTimer = null, lastCanvas = null;
-  function scheduleShare() { clearTimeout(shareTimer); shareTimer = setTimeout(paintShare, 220); }
+  function scheduleShare() { clearTimeout(shareTimer); shareTimer = setTimeout(paintShare, 250); }
   function paintShare() {
     var img = $("#shareimg"); if (!img) return;
     var chips = '<button class="chip all" data-sw="all" aria-pressed="' + (S.shareWho === "all") + '">Everyone</button>';
@@ -553,75 +808,74 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   }
   function drawShare(c, who) {
     var W = 1080, P = 48, IW = W - P * 2, SANS = '"DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif', MONO = '"DM Mono", ui-monospace, Menlo, monospace';
-    var INK = "#131a33", MUTED = "#5b6685", LINE = "#dce2f3", ACC = "#3d5afe";
+    var INK = "#131a33", MUTED = "#535e7d", LINE = "#dce2f3", ACC = "#3d5afe", OK = "#0b8a5f";
     var col = function (i) { return "hsl(" + hue(i) + " 68% 47%)"; };
     var meas = document.createElement("canvas").getContext("2d");
-    var rows = items.filter(function (it) { var ids = sharesOf(it); return ids.length && (who === "all" || (it.shares[who] || 0) > 0); });
-    // legend layout per row (wraps onto extra lines)
-    rows.forEach(function (it) {
-      meas.font = "600 26px " + SANS; var lines = [[]], x = 0;
-      sharesOf(it).sort(function (a, b) { return a - b; }).forEach(function (p) {
-        var label = nm(p) + " " + it.shares[p] + "%", w = 30 + meas.measureText(label).width + 28;
-        if (x + w > IW - 48 && lines[lines.length - 1].length) { lines.push([]); x = 0; }
+    var rows = items.filter(function (it) { return sharesOf(it).length && (who === "all" || itemSplit(it)[who] > 0); });
+    rows.forEach(function (it) { // legend wraps onto extra lines
+      meas.font = "600 26px " + SANS; var lines = [[]], x = 0, sp = itemSplit(it), ids = sharesOf(it);
+      ids.forEach(function (p) {
+        var label = nm(p) + " " + money(sp[p]) + (ids.length > 1 ? " · " + it.shares[p] + "%" : ""), w = 30 + meas.measureText(label).width + 30;
+        if (x + w > IW - 56 && lines[lines.length - 1].length) { lines.push([]); x = 0; }
         lines[lines.length - 1].push({ p: p, label: label, w: w }); x += w;
       });
       it._lg = lines; it._bo = who === "all" && it.paidBy == null ? 74 : 112; it._h = it._bo + 66 + (lines.length - 1) * 40 + 30;
     });
+    var xs = c.xfers.filter(function (x) { return x.amt >= 1 && (who === "all" || x.from === who || x.to === who); });
     var HEAD = 330, GAP = 20, rowsH = rows.length ? rows.reduce(function (a, it) { return a + it._h + GAP; }, 0) : 140;
-    var hasCredit = who !== "all" && c.credit[who] > 0;
-    var tot = who === "all" ? c.totals.length * 74 + 150 : (5 + (hasCredit ? 1 : 0)) * 66 + 30;
-    var H = HEAD + 40 + rowsH + 20 + tot + 120;
+    var xH = 90 + Math.max(1, xs.length) * 74;
+    var tot = who === "all" ? 0 : (5 + (c.paid[who] ? 1 : 0)) * 66 + 40;
+    var H = HEAD + 40 + xH + 30 + rowsH + (tot ? tot + 20 : 0) + 110;
     var cv = document.createElement("canvas"); cv.width = W; cv.height = H; var g = cv.getContext("2d");
     function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
     function text(t, x, y, font, color, align) { g.font = font; g.fillStyle = color; g.textAlign = align || "left"; g.textBaseline = "alphabetic"; g.fillText(t, x, y); }
     function fit(t, font, maxW) { g.font = font; while (t.length > 1 && g.measureText(t).width > maxW) t = t.slice(0, -2) + "…"; return t; }
+    function card(y, h) { g.fillStyle = "#fff"; rr(P, y, IW, h, 28); g.fill(); g.strokeStyle = LINE; g.lineWidth = 2; g.stroke(); }
+    function circ(x, y, r, color) { g.fillStyle = color; g.beginPath(); g.arc(x, y, r, 0, 6.2832); g.fill(); }
     g.fillStyle = "#f4f6fc"; g.fillRect(0, 0, W, H);
-    // header band
-    g.fillStyle = ACC; rr(0, 0, W, HEAD, 0); g.fill();
-    text(fit(billHead(false).toUpperCase(), "700 28px " + SANS, IW), P, 78, "700 28px " + SANS, "rgba(255,255,255,.8)");
-    var title = who === "all" ? "Check split" : fit(nm(who) + (c.net[who] < 0 ? " gets back" : " owes"), "800 60px " + SANS, IW);
-    text(title, P, 160, "800 60px " + SANS, "#fff");
-    text(who === "all" ? money(c.grand) : (c.net[who] < 0 ? "+" : "") + money(Math.abs(c.net[who])), P, 270, "500 108px " + MONO, "#fff");
-    if (who === "all") text("bill total", P + 640, 270, "500 34px " + SANS, "rgba(255,255,255,.8)");
-    // dishes
-    var y = HEAD + 40;
-    if (!rows.length) { text("No dishes assigned yet", W / 2, y + 80, "500 34px " + SANS, MUTED, "center"); y += 140; }
+    g.fillStyle = ACC; g.fillRect(0, 0, W, HEAD);
+    text(fit(billHead(false).toUpperCase(), "700 28px " + SANS, IW), P, 78, "700 28px " + SANS, "rgba(255,255,255,.85)");
+    var b = who === "all" ? 0 : c.bal[who];
+    text(who === "all" ? "Who pays who" : fit(nm(who) + (Math.abs(b) < 1 ? " is all square" : b < 0 ? " gets back" : " pays"), "800 60px " + SANS, IW), P, 160, "800 60px " + SANS, "#fff");
+    text(who === "all" ? money(c.grand) : money(Math.abs(b)), P, 270, "500 108px " + MONO, "#fff");
+    if (who === "all") text("whole bill", W - P, 270, "500 34px " + SANS, "rgba(255,255,255,.85)", "right");
+    var y = HEAD + 40, ty;
+    card(y, xH); text("PAYMENTS" + (S.roundUp ? " (ROUNDED UP)" : ""), P + 28, y + 52, "700 26px " + SANS, MUTED);
+    ty = y + 118;
+    if (!xs.length) text("Everyone is all square", P + 28, ty, "600 36px " + SANS, OK);
+    xs.forEach(function (x) {
+      circ(P + 44, ty - 12, 16, col(x.from));
+      text(fit(nm(x.from) + "  →  " + nm(x.to), "600 36px " + SANS, IW - 330), P + 72, ty, "600 36px " + SANS, INK);
+      text(money(shownAmt(x.amt)), P + IW - 28, ty, "600 40px " + MONO, ACC, "right"); ty += 74;
+    });
+    y += xH + 30;
+    if (!rows.length) { text("No items assigned yet", W / 2, y + 80, "500 34px " + SANS, MUTED, "center"); y += 140; }
     rows.forEach(function (it) {
-      g.fillStyle = "#fff"; rr(P, y, IW, it._h, 28); g.fill(); g.strokeStyle = LINE; g.lineWidth = 2; g.stroke();
-      var mine = who === "all" ? 0 : it.price * it.shares[who] / 100;
+      card(y, it._h); var sp = itemSplit(it);
       text(fit(it.name + (it.qty > 1 ? " ×" + it.qty : ""), "700 36px " + SANS, IW - 330), P + 28, y + 52, "700 36px " + SANS, INK);
-      text(who === "all" ? money(it.price) : money(Math.round(mine)), P + IW - 28, y + 52, "500 36px " + MONO, INK, "right");
+      text(who === "all" ? money(it.price) : money(sp[who]), P + IW - 28, y + 52, "500 36px " + MONO, INK, "right");
       var subl = (who !== "all" ? it.shares[who] + "% of " + money(it.price) : "") + (it.paidBy != null ? (who !== "all" ? " · " : "") + "paid by " + nm(it.paidBy) : "");
-      if (subl) text(fit(subl, "400 26px " + MONO, IW - 56), P + 28, y + 92, "400 26px " + MONO, it.paidBy != null ? "#0e9f6e" : MUTED);
-      // segmented bar
-      var bx = P + 28, bw = IW - 56, by = y + it._bo, ids = sharesOf(it).sort(function (a, b) { return a - b; }), cx = bx;
+      if (subl) text(fit(subl, "400 26px " + MONO, IW - 56), P + 28, y + 92, "400 26px " + MONO, it.paidBy != null ? OK : MUTED);
+      var bx = P + 28, bw = IW - 56, by = y + it._bo, ids = sharesOf(it), cx = bx;
       g.save(); rr(bx, by, bw, 30, 15); g.clip(); g.fillStyle = LINE; g.fillRect(bx, by, bw, 30);
-      ids.forEach(function (p) { var w = bw * it.shares[p] / 100; g.fillStyle = col(p); g.fillRect(cx, by, w - (p === ids[ids.length - 1] ? 0 : 3), 30); cx += w; });
+      ids.forEach(function (p, k) { var w = bw * it.shares[p] / 100; g.fillStyle = col(p); g.fillRect(cx, by, w - (k === ids.length - 1 ? 0 : 3), 30); cx += w; });
       g.restore();
-      // legend
       it._lg.forEach(function (line, li) {
         var lx = bx, ly = y + it._bo + 66 + li * 40;
-        line.forEach(function (m) { g.fillStyle = col(m.p); g.beginPath(); g.arc(lx + 11, ly - 9, 11, 0, 6.2832); g.fill(); text(m.label, lx + 30, ly, "600 26px " + SANS, who !== "all" && m.p === who ? INK : MUTED); lx += m.w; });
+        line.forEach(function (m) { circ(lx + 11, ly - 9, 11, col(m.p)); text(m.label, lx + 30, ly, "600 26px " + SANS, who !== "all" && m.p === who ? INK : MUTED); lx += m.w; });
       });
       y += it._h + GAP;
     });
-    // totals card
-    y += 20; g.fillStyle = "#fff"; rr(P, y, IW, tot, 28); g.fill(); g.strokeStyle = LINE; g.lineWidth = 2; g.stroke();
-    var ty = y + 68, L = P + 28, R = P + IW - 28;
-    if (who === "all") {
-      c.net.forEach(function (v, i) { g.fillStyle = col(i); g.beginPath(); g.arc(L + 16, ty - 12, 16, 0, 6.2832); g.fill(); text(fit(nm(i), "600 34px " + SANS, 460), L + 48, ty, "600 34px " + SANS, INK); text(v < 0 ? "gets back " + money(-v) : money(v), R, ty, "500 36px " + MONO, v < 0 ? "#0e9f6e" : INK, "right"); ty += 74; });
-      g.fillStyle = LINE; g.fillRect(L, ty - 36, IW - 56, 2);
-      text(fit("Food " + money(c.sub) + " · Tax " + money(c.tax) + " · Tip " + money(c.tip) + (c.paidTotal ? " · Paid upfront " + money(c.paidTotal) : ""), "400 24px " + MONO, IW - 56), L, ty + 18, "400 24px " + MONO, MUTED);
-    } else {
-      [["Food", c.food[who], ""], ["Tax", c.taxO[who], S.taxFollows ? "in proportion to food" : "split evenly"], ["Tip", c.tipO[who], S.tipFollows ? "in proportion to food" : "split evenly"]].forEach(function (r) {
-        text(r[0], L, ty, "500 34px " + SANS, INK); if (r[2]) text(r[2], L + 130, ty, "400 24px " + SANS, MUTED); text(money(r[1]), R, ty, "500 36px " + MONO, INK, "right"); ty += 66;
-      });
-      if (hasCredit) { text("Already paid upfront", L, ty, "500 34px " + SANS, "#0e9f6e"); text("-" + money(c.credit[who]), R, ty, "500 36px " + MONO, "#0e9f6e", "right"); ty += 66; }
-      g.fillStyle = LINE; g.fillRect(L, ty - 40, IW - 56, 2); ty += 6;
-      g.fillStyle = col(who); g.beginPath(); g.arc(L + 16, ty - 12, 16, 0, 6.2832); g.fill();
-      text(c.net[who] < 0 ? "Gets back" : "Total", L + 48, ty, "800 38px " + SANS, INK); text(money(Math.abs(c.net[who])), R, ty, "800 44px " + MONO, c.net[who] < 0 ? "#0e9f6e" : ACC, "right");
+    if (tot) {
+      card(y, tot); var L = P + 28, R = P + IW - 28; ty = y + 68;
+      [["Food", c.food[who]], ["Tax", c.taxO[who]], ["Tip", c.tipO[who]]].forEach(function (r) { text(r[0], L, ty, "500 34px " + SANS, INK); text(money(r[1]), R, ty, "500 36px " + MONO, INK, "right"); ty += 66; });
+      text("Share", L, ty, "700 34px " + SANS, INK); text(money(c.share[who]), R, ty, "700 36px " + MONO, INK, "right"); ty += 66;
+      if (c.paid[who]) { text("Already paid", L, ty, "500 34px " + SANS, OK); text("-" + money(c.paid[who]), R, ty, "500 36px " + MONO, OK, "right"); ty += 66; }
+      g.fillStyle = LINE; g.fillRect(L, ty - 44, IW - 56, 2); ty += 4;
+      circ(L + 16, ty - 12, 16, col(who));
+      text(Math.abs(b) < 1 ? "All square" : b < 0 ? "Gets back" : "Pays", L + 48, ty, "800 38px " + SANS, INK); text(money(Math.abs(b)), R, ty, "800 44px " + MONO, b < 0 ? OK : ACC, "right");
     }
-    text("Split with Split the Check", W / 2, H - 50, "500 24px " + SANS, MUTED, "center");
+    text("Food " + money(c.sub) + " · Tax " + money(c.tax) + " · Tip " + money(c.tip), W / 2, H - 50, "500 24px " + MONO, MUTED, "center");
     return cv;
   }
   function copyImage(btn) {
@@ -630,102 +884,142 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     if (!lastCanvas) return;
     try { lastCanvas.toBlob(function (b) { try { navigator.clipboard.write([new ClipboardItem({ "image/png": b })]).then(ok, fail); } catch (e) { fail(); } }, "image/png"); } catch (e) { fail(); }
   }
-
-  /* ---- paint everything that depends on the numbers ---- */
-  function paintAll() {
-    var c = compute();
-    $("#billtotal").textContent = money(c.grand);
-    $("#meta").textContent = billHead(true);
-    renderPaid();
-    $("#pfill").style.width = (items.length ? c.doneCount / items.length * 100 : 0) + "%";
-    $("#pcount").textContent = items.length ? c.doneCount + " of " + items.length + " dishes assigned" : "No items yet";
-    $("#pleft").textContent = !items.length ? "" : c.unassigned >= 0.5 ? money(c.unassigned) + " left to assign" : "All assigned";
-    if ($("#tipbig")) paintTip();
-    c.totals.forEach(function (v, i) {
-      var nv = c.net[i];
-      tween($('[data-own="' + i + '"]'), "own" + i, Math.abs(nv));
-      var ol = $('[data-olbl="' + i + '"]'); if (ol) { ol.textContent = nv < 0 ? "gets back" : "owes"; ol.className = "olbl" + (nv < 0 ? " back" : ""); }
-      var b = $('[data-brk="' + i + '"]'); if (b) b.innerHTML = "<span>Food " + money(c.food[i]) + "</span><span>Tax " + money(c.taxO[i]) + "</span><span>Tip " + money(c.tipO[i]) + "</span>" + (c.credit[i] ? "<span>Paid upfront -" + money(c.credit[i]) + "</span>" : "");
-    });
-    $("#cFood").textContent = money(c.sub); $("#cTax").textContent = money(c.tax); $("#cTip").textContent = money(c.tip);
-    var ok = Math.abs(c.sum - c.grand) < 1;
-    $("#cPaidRow").hidden = !c.paidTotal; $("#cPaid").textContent = "-" + money(c.paidTotal);
-    $("#cRow").className = "check " + (ok ? "good" : "bad");
-    $("#cLbl").textContent = ok ? (c.paidTotal ? "Left to pay on the check" : "Everyone adds up to the bill") : "Still unassigned";
-    $("#cVal").textContent = money(ok ? c.grand - c.paidTotal : c.grand - c.sum);
-    $("#pills").innerHTML = c.totals.map(function (v, i) { return '<div class="pill">' + av(i) + '<span><span class="nm">' + esc(nm(i)) + (c.net[i] < 0 ? " gets back" : "") + "</span><b" + (c.net[i] < 0 ? ' style="color:var(--ok)"' : "") + ">" + money(Math.abs(c.net[i])) + "</b></span></div>"; }).join("");
-    var pv = $("#preview"); if (pv) pv.textContent = summaryText(c);
-    save(); scheduleShare();
-    var l = $("#dleft"); l.textContent = !items.length ? "Add items to start" : c.unassigned >= 0.5 ? money(c.unassigned) + " unassigned" : "All assigned ✓"; l.className = "left" + (!items.length || c.unassigned >= 0.5 ? "" : " ok");
+  function saveImage(btn) {
+    if (!lastCanvas || !dlFn) return;
+    var who = S.shareWho === "all" ? "everyone" : nm(S.shareWho).toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    var base = billHead(false).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "bill";
+    lastCanvas.toBlob(function (b) {
+      dlFn.save({ filename: base + "-" + who + ".png", data: b }).then(function () { var o = btn.textContent; btn.textContent = "Saved!"; setTimeout(function () { btn.textContent = o; }, 1600); }, function () {});
+    }, "image/png");
   }
 
-  /* ---- events ---- */
+  /* ================= confetti ================= */
+  var wasAll = null;
+  function confetti() {
+    if (reduce) return;
+    var cv = $("#confetti"), g = cv.getContext("2d"), W = cv.width = innerWidth, H = cv.height = innerHeight, parts = [], t0 = performance.now();
+    cv.hidden = false;
+    for (var i = 0; i < 140; i++) parts.push({ x: W / 2, y: H * .55, vx: (Math.random() - .5) * 14, vy: -Math.random() * 16 - 6, r: Math.random() * 6 + 5, h: HUES[i % HUES.length], a: Math.random() * 6 });
+    (function f(t) {
+      var k = (t - t0) / 1800; g.clearRect(0, 0, W, H);
+      parts.forEach(function (p) { p.vy += .45; p.x += p.vx; p.y += p.vy; p.a += .2; g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.globalAlpha = Math.max(0, 1 - k); g.fillStyle = "hsl(" + p.h + " 75% 55%)"; g.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); g.restore(); });
+      if (k < 1) requestAnimationFrame(f); else cv.hidden = true;
+    })(t0);
+  }
+
+  /* ================= paint ================= */
+  function paintSteps(c) {
+    var st = [["People", S.n + " here", "done"], ["Food", items.length ? c.doneCount + "/" + items.length : "add", c.all ? "done" : "todo"],
+      ["Paid", S.checkPayer === -1 ? "nobody" : nm(S.checkPayer), "done"], ["Tip", money(c.tip), "done"], ["Pay up", c.all ? "ready" : "—", c.all ? "done" : ""]];
+    $("#steps").innerHTML = st.map(function (s, i) { return '<button class="stp ' + s[2] + '" data-goto="s' + (i + 1) + '"><b class="sn">' + (s[2] === "done" ? "✓" : i + 1) + "</b><span>" + s[0] + "</span><small>" + esc(s[1]) + "</small></button>"; }).join("");
+  }
+  function paintAll() {
+    var c = compute();
+    $("#meta").textContent = billHead(true);
+    $("#billtotal").textContent = money(c.grand);
+    paintSteps(c);
+    if ($("#pfill")) {
+      $("#pfill").style.width = (items.length ? c.doneCount / items.length * 100 : 0) + "%";
+      $("#pcount").textContent = items.length ? c.doneCount + " of " + items.length + " have names" : "Nothing added yet";
+      $("#pleft").textContent = !items.length ? "" : c.unassigned >= 1 ? money(c.unassigned) + " still needs a name" : "All done!";
+    }
+    renderPaid(c); paintTip(c); paintSettle(c);
+    $("#pills").innerHTML = c.bal.map(function (b, i) {
+      var back = b < 0;
+      return '<button class="pill' + (back ? " back" : "") + '" data-sheet="' + i + '">' + av(i) + '<span><span class="nm">' + esc(nm(i)) + (Math.abs(b) < 1 ? " · square" : back ? " gets" : " pays") + "</span><b>" + money(Math.abs(b)) + "</b></span></button>";
+    }).join("");
+    var l = $("#dleft");
+    l.textContent = !items.length ? "Add items to start" : c.all ? "All done ✓" : (items.length - c.doneCount) + " left · show me";
+    l.className = "dleft" + (c.all ? " ok" : "");
+    if (wasAll === false && c.all) confetti();
+    wasAll = c.all;
+    save(); scheduleShare();
+  }
+  function renderAll() { renderBills(); renderPeople(); renderDishes(); renderTip(); renderSettle(); wasAll = null; paintAll(); }
+
+  /* ================= events ================= */
   document.addEventListener("click", function (e) {
-    var t = e.target.closest("button"); if (!t) return;
-    if (t.id === "reset" || t.id === "delBill") {
-      var isDel = t.id === "delBill", label = isDel ? "Delete bill" : "Reset";
-      if (!t.classList.contains("arm")) { t.classList.add("arm"); t.textContent = isDel ? "Tap again to delete" : "Tap again to clear"; clearTimeout(t._tm); t._tm = setTimeout(function () { t.classList.remove("arm"); t.textContent = label; }, 3200); return; }
-      clearTimeout(t._tm); t.classList.remove("arm"); t.textContent = label;
-      if (isDel) { bills.splice(cur, 1); cur = Math.max(0, Math.min(cur, bills.length - 1)); }
-      else { var ob = bills[cur]; bills[cur] = newBill(ob.kind, ob.title, ob.id); }
-      bind(); renderAll(); window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" }); return;
-    }
-    if (t.dataset.paywho != null) { payWho = +t.dataset.paywho; return renderPaid(); }
-    if (t.dataset.payitem != null) { var pit = byId(+t.dataset.payitem); if (!pit) return; pit.paidBy = pit.paidBy === payWho ? null : payWho; pit.payOpen = pit.paidBy != null; paintDish(pit); return paintAll(); }
+    var t = e.target.closest("button"); if (!t) { if (e.target.id === "sheet") closeSheet(); return; }
+    if (t.id === "undoBtn") return undo();
+    if (t.id === "closeSheet") return closeSheet();
+    if (t.dataset.copyp != null) return copyText(personText(compute(), +t.dataset.copyp), t);
+    if (t.dataset.sheet != null) return openSheet(+t.dataset.sheet);
+    if (t.dataset.goto) { var sec = $("#" + t.dataset.goto); if (sec) sec.scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); return; }
+    if (t.id === "dleft" || t.dataset.jump) return jumpUnassigned();
+    if (t.id === "reset") { snap("Bill reset."); var ob = bills[cur]; bills[cur] = newBill(ob.kind, ob.title, ob.id); bind(); renderAll(); window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" }); return; }
+    if (t.id === "delBill") { snap("Deleted " + (bills[cur].title || "the bill") + "."); bills.splice(cur, 1); cur = Math.max(0, Math.min(cur, bills.length - 1)); bind(); renderAll(); return; }
     if (t.dataset.bill != null) return goBill(+t.dataset.bill);
-    if (t.id === "newBill") {
-      var nb = newBill("manual", "Bill " + (bills.length + 1), nextBillId++); nb.S.n = S.n; nb.S.names = S.names.slice();
-      bills.push(nb); return goBill(bills.length - 1);
-    }
-    if (t.id === "addBtn") return addItem();
-    if (t.dataset.sw != null) { S.shareWho = t.dataset.sw === "all" ? "all" : +t.dataset.sw; save(); paintShare(); return; }
-    if (t.id === "copyimg") return copyImage(t);
+    if (t.id === "newBill") { var nb = newBill("manual", "Bill " + (bills.length + 1), nextBillId++); nb.S.n = S.n; nb.S.names = S.names.slice(); nb.S.venmo = S.venmo.slice(); bills.push(nb); return goBill(bills.length - 1); }
     if (t.id === "plus") return setCount(S.n + 1);
     if (t.id === "minus") return setCount(S.n - 1);
+    if (t.id === "venmoToggle") { S.showVenmo = !S.showVenmo; renderPeople(); return save(); }
+    if (t.id === "addBtn") return addItem();
+    if (t.id === "evenAll") { if (!items.length) return; snap("Everything split evenly."); var ev = evenShares(everyone()); items.forEach(function (it) { it.shares = JSON.parse(JSON.stringify(ev)); }); renderDishList(); return paintAll(); }
+    if (t.id === "clearAll") { if (!items.length) return; snap("Cleared every name."); items.forEach(function (it) { it.shares = {}; it.open = false; }); renderDishList(); return paintAll(); }
+    if (t.dataset.payer != null) { S.checkPayer = +t.dataset.payer; return paintAll(); }
+    if (t.dataset.paywho != null) { S.payWho = +t.dataset.paywho; return paintAll(); }
+    if (t.dataset.payitem != null) { var pit = byId(+t.dataset.payitem); if (!pit) return; pit.paidBy = pit.paidBy === S.payWho ? null : S.payWho; paintDish(pit); return paintAll(); }
     var card = t.closest(".dish");
     if (card) {
       var it = byId(+card.dataset.id); if (!it) return;
-      if (t.dataset.del) { items.splice(items.indexOf(it), 1); renderDishList(); paintAll(); return; }
+      if (t.dataset.del) { snap("Removed " + it.name + "."); items.splice(items.indexOf(it), 1); renderDishList(); return paintAll(); }
+      if (t.dataset.edit) { it._edit = true; card.outerHTML = dishHTML(it); var nmIn = $("#ed-name-" + it.id); if (nmIn) nmIn.focus(); return; }
+      if (t.dataset.edcancel) { it._edit = false; card.outerHTML = dishHTML(it); return paintDish(it); }
+      if (t.dataset.edsave) {
+        var np = parseMoney($("#ed-price-" + it.id).value); if (np <= 0) { $("#ed-price-" + it.id).focus(); return; }
+        snap("Changed " + it.name + ".");
+        it.name = ($("#ed-name-" + it.id).value.trim() || it.name).slice(0, 40); it.price = np; it.qty = Math.max(1, Math.min(99, parseInt($("#ed-qty-" + it.id).value, 10) || 1)); it._edit = false;
+        card.outerHTML = dishHTML(it); paintDish(it); return paintAll();
+      }
       if (t.dataset.p != null) { var p = +t.dataset.p, ids = sharesOf(it); ids = it.shares[p] != null ? ids.filter(function (x) { return x !== p; }) : ids.concat(p); it.shares = evenShares(ids.sort(function (a, b) { return a - b; })); }
-      else if (t.dataset.all) { var every = []; for (var k = 0; k < S.n; k++) every.push(k); it.shares = sharesOf(it).length === S.n ? {} : evenShares(every); }
+      else if (t.dataset.all) it.shares = sharesOf(it).length === S.n ? {} : evenShares(everyone());
       else if (t.dataset.open) it.open = !it.open;
-      else if (t.dataset.payopen) it.payOpen = true;
-      else if (t.dataset.payhide) it.payOpen = false;
-      else if (t.dataset.pay != null) { var pp = +t.dataset.pay; it.paidBy = it.paidBy === pp ? null : pp; it.payOpen = it.paidBy != null; }
-      else if (t.dataset.even) it.shares = evenShares(sharesOf(it).sort(function (a, b) { return a - b; }));
+      else if (t.dataset.even) it.shares = evenShares(sharesOf(it));
       else return;
-      paintDish(it); paintAll(); return;
+      paintDish(it); return paintAll();
     }
     if (t.dataset.pct != null) { S.tipMode = "pct"; S.tipPct = +t.dataset.pct; $("#tipamt").value = ""; $$("#presets button").forEach(function (b) { b.setAttribute("aria-pressed", b === t); }); return paintAll(); }
     if (t.id === "swTax") { S.taxFollows = !S.taxFollows; t.setAttribute("aria-checked", S.taxFollows); return paintAll(); }
     if (t.id === "swTip") { S.tipFollows = !S.tipFollows; t.setAttribute("aria-checked", S.tipFollows); return paintAll(); }
+    if (t.id === "swTipTax") { S.tipOnTax = !S.tipOnTax; t.setAttribute("aria-checked", S.tipOnTax); return paintAll(); }
+    if (t.id === "swRound") { S.roundUp = !S.roundUp; t.setAttribute("aria-checked", S.roundUp); return paintAll(); }
     if (t.id === "copy") return copyText(summaryText(compute()), t);
-    if (t.dataset.copyp != null) return copyText(personText(compute(), +t.dataset.copyp), t);
+    if (t.dataset.sw != null) { S.shareWho = t.dataset.sw === "all" ? "all" : +t.dataset.sw; save(); return paintShare(); }
+    if (t.id === "copyimg") return copyImage(t);
+    if (t.id === "saveimg") return saveImage(t);
   });
   document.addEventListener("input", function (e) {
     var t = e.target;
-    if (t.dataset.i != null) { // rename: update labels in place so typing keeps focus
+    if (t.dataset.i != null) { // rename in place so typing keeps focus
       var i = +t.dataset.i; S.names[i] = t.value;
-      var ch = nm(i).charAt(0).toUpperCase();
-      $$('[data-avp="' + i + '"]').forEach(function (a) { a.textContent = ch; });
-      $$("#sDishes .chip[data-p='" + i + "'] .t").forEach(function (a) { a.textContent = nm(i); });
-      $$('[data-who="' + i + '"]').forEach(function (a) { a.textContent = nm(i); });
-      $$('[data-copyp="' + i + '"]').forEach(function (a) { a.textContent = "Copy " + nm(i) + "'s breakdown"; });
-      items.forEach(paintDish); paintAll(); return;
+      $$('[data-avp="' + i + '"]').forEach(function (a) { a.textContent = nm(i).charAt(0).toUpperCase(); });
+      $$("#s2 .chip[data-p='" + i + "'] .t").forEach(function (a) { a.textContent = nm(i); });
+      items.forEach(paintDish); return paintAll();
     }
-    if (t.dataset.sl != null) { var it = byId(+t.closest(".dish").dataset.id); if (!it) return; setShare(it, +t.dataset.sl, +t.value); syncSliders(it); paintAll(); return; }
-    if (t.id === "billTitle") { bills[cur].title = t.value.slice(0, 28); var tb = $('.tab[data-bill="' + cur + '"]'); if (tb) tb.textContent = t.value.trim() || "Bill"; paintAll(); return; }
-    if (t.id === "tipamt") { S.tipMode = "amt"; S.tipAmtCents = parseMoney(t.value); $$("#presets button").forEach(function (b) { b.setAttribute("aria-pressed", "false"); }); paintAll(); }
-    if (t.id === "taxamt") { S.taxCents = parseMoney(t.value); paintAll(); }
+    if (t.dataset.v != null) { S.venmo[+t.dataset.v] = t.value.replace(/^@/, "").replace(/[^A-Za-z0-9_-]/g, ""); return paintAll(); }
+    if (t.dataset.sl != null) { var it = byId(+t.closest(".dish").dataset.id); if (!it) return; setShare(it, +t.dataset.sl, +t.value); syncSliders(it); return paintAll(); }
+    if (t.id === "billTitle") { bills[cur].title = t.value.slice(0, 28); var tb = $('.tab[data-bill="' + cur + '"]'); if (tb) tb.textContent = t.value.trim() || "Bill"; return paintAll(); }
+    if (t.id === "tipamt") { S.tipMode = "amt"; S.tipAmtCents = parseMoney(t.value); $$("#presets button").forEach(function (b) { b.setAttribute("aria-pressed", "false"); }); return paintAll(); }
+    if (t.id === "taxamt") { S.taxCents = parseMoney(t.value); return paintAll(); }
   });
-
+  document.addEventListener("change", function (e) { if (e.target.id === "scanFile" && e.target.files && e.target.files[0] && sampleFn) scanReceipt(e.target.files[0]); });
   document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !$("#sheet").hidden) return closeSheet();
     if (e.key !== "Enter") return; var id = e.target.id;
     if (id === "addName") { e.preventDefault(); $("#addPrice").focus(); }
     else if (id === "addPrice" || id === "addQty") { e.preventDefault(); addItem(); }
   });
 
+  /* ================= start ================= */
   load();
   renderAll();
+  // Optional abilities from the Claude viewer: reading receipt photos and saving pictures.
+  if (window.claude && typeof window.claude.use === "function") {
+    window.claude.use("sample").then(function (s) {
+      if (!s) return; sampleFn = s;
+      return s.limits().then(function (lim) { if (lim && lim.images) { canImages = true; var b = $("#scanBtn"); if (b) b.hidden = false; renderDishList(); } }, function () {});
+    }, function () {});
+    window.claude.use("downloads").then(function (d) { if (!d) return; dlFn = d; var b = $("#saveimg"); if (b) b.hidden = false; }, function () {});
+  }
 })();
 </script>
