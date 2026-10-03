@@ -636,6 +636,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     var cards = A.ids.map(function (id) { return personCard(A, id); }).join("");
     return '<p class="brand">Split the Check</p><h1>Who pays who</h1><p class="say">' + (A.bills.length > 1 ? "All " + A.bills.length + " bills are added together, so money changes hands as few times as possible." : "Each line below is one payment to make.") + "</p>" + warn +
       '<div class="stack">' + pays + "</div>" +
+      (A.xfers.length ? '<div class="row2" style="margin-top:12px"><button class="primary" id="copyPayPic">Copy picture</button><button class="ghost" id="copyPayText">Copy text</button></div><div id="payImg"></div>' : "") +
       '<button class="switch" role="switch" id="swRound" aria-checked="' + st.roundUp + '" style="margin:14px 0 4px"><span class="txt"><b>Round up to whole dollars</b><small>Easier to pay. The person being paid gets a few cents extra.</small></span><span class="tg"></span></button>' +
       '<div class="gap"></div><div class="card"><p class="sec" style="margin-bottom:2px">Tonight\'s bills</p>' + nightRows + '<div class="line total"><span>Total</span><b>' + money(A.total) + "</b></div></div>" +
       '<h2 style="margin:28px 0 4px">Each person</h2><p class="hint" style="margin-bottom:12px">Tap “See why” to see exactly what each person is paying for.</p>' +
@@ -685,6 +686,57 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     });
     if (A.todo.length) l.push("", "Note: some items don't have names yet, so this isn't final.");
     return l.join("\n");
+  }
+  function payText(A) {
+    var l = ["WHO PAYS WHO" + (A.bills.length > 1 ? " (all " + A.bills.length + " bills)" : "") + (st.roundUp ? ", rounded up" : "")];
+    A.xfers.forEach(function (x) { var a = shownAmt(x.amt), link = venmoLink(x.to, a); l.push("• " + nm(x.from) + " pays " + nm(x.to) + " " + money(a)); if (link) l.push("  Venmo: " + link); });
+    l.push("", "Tonight: " + A.bills.map(function (x) { return (x.b.title || "Bill") + " " + money(x.c.grand) + (x.b.payer != null && person(x.b.payer) ? " (paid by " + nm(x.b.payer) + ")" : ""); }).join(", ") + ". Total " + money(A.total) + ".");
+    return l.join("\n");
+  }
+  function drawPayPicture(A) {
+    var W = 1080, P = 48, IW = W - P * 2, L = P + 32, R = P + IW - 32, SANS = '"DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif', MONO = '"DM Mono", ui-monospace, Menlo, monospace';
+    var INK = "#131a33", MUTED = "#535e7d", LINE = "#dce2f3", ACC = "#3d5afe";
+    var xs = A.xfers, HEAD = 250, payH = 50 + xs.length * 170, billH = 100 + A.bills.length * 76 + 80;
+    var H = HEAD + 40 + payH + 24 + billH + 60;
+    var cv = document.createElement("canvas"); cv.width = W; cv.height = H; var g = cv.getContext("2d");
+    function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+    function text(t, x, y, font, color, align) { g.font = font; g.fillStyle = color; g.textAlign = align || "left"; g.textBaseline = "alphabetic"; g.fillText(t, x, y); }
+    function circle(x, y, r, c, letter) { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 6.2832); g.fill(); if (letter) text(letter, x, y + 13, "700 36px " + SANS, "#fff", "center"); }
+    function col(id) { return id === "server" ? "#8892b0" : "hsl(" + hueOf(id) + " 68% 47%)"; }
+    function card(y, h) { g.fillStyle = "#fff"; rr(P, y, IW, h, 28); g.fill(); g.strokeStyle = LINE; g.lineWidth = 2; g.stroke(); }
+    g.fillStyle = "#f4f6fc"; g.fillRect(0, 0, W, H);
+    g.fillStyle = ACC; g.fillRect(0, 0, W, HEAD);
+    text(A.bills.length > 1 ? "NIGHT OUT · " + A.bills.length + " BILLS" : (A.bills[0].b.title || "BILL").toUpperCase(), P, 80, "700 28px " + SANS, "rgba(255,255,255,.85)");
+    text("Who pays who", P, 176, "800 72px " + SANS, "#fff");
+    var y = HEAD + 40; card(y, payH);
+    xs.forEach(function (x, k) {
+      var yy = y + 26 + k * 170;
+      if (k) { g.fillStyle = LINE; g.fillRect(L, yy, IW - 64, 2); }
+      circle(L + 40, yy + 62, 40, col(x.from), nm(x.from).charAt(0).toUpperCase());
+      text("→", L + 112, yy + 76, "700 40px " + SANS, MUTED, "center");
+      circle(L + 184, yy + 62, 40, col(x.to), x.to === "server" ? "$" : nm(x.to).charAt(0).toUpperCase());
+      text(money(shownAmt(x.amt)), R, yy + 80, "500 58px " + MONO, INK, "right");
+      text(nm(x.from) + " pays " + nm(x.to), L, yy + 140, "700 34px " + SANS, INK);
+    });
+    y += payH + 24; card(y, billH);
+    text("TONIGHT'S BILLS", L, y + 54, "700 26px " + SANS, MUTED);
+    A.bills.forEach(function (x, k) {
+      var yy = y + 110 + k * 76;
+      text(x.b.title || "Bill", L, yy, "600 32px " + SANS, INK);
+      text(x.b.payer != null && person(x.b.payer) ? "paid by " + nm(x.b.payer) : "not paid yet", L, yy + 30, "400 24px " + SANS, MUTED);
+      text(money(x.c.grand), R, yy, "500 32px " + MONO, INK, "right");
+    });
+    var ty = y + 110 + A.bills.length * 76 + 10;
+    g.fillStyle = LINE; g.fillRect(L, ty - 30, IW - 64, 2);
+    text("Total", L, ty + 22, "800 34px " + SANS, INK); text(money(A.total), R, ty + 22, "800 36px " + MONO, ACC, "right");
+    if (st.roundUp) text("Payments rounded up to whole dollars", W / 2, H - 22, "400 24px " + SANS, MUTED, "center");
+    return cv;
+  }
+  function copyPayPicture(btn) {
+    var cv = drawPayPicture(calcAll()), box = $("#payImg"), url = cv.toDataURL("image/png");
+    var show = function (note) { if (box) box.innerHTML = '<p class="hint" style="margin:12px 0 8px">' + note + '</p><img src="' + url + '" alt="Picture of who pays who" style="width:100%;border-radius:14px;border:1px solid var(--line);display:block">'; };
+    copyCanvas(cv, function () { var o = btn.textContent; btn.textContent = "Copied!"; setTimeout(function () { btn.textContent = o; }, 1600); show("Copied. Paste it in your group text. Here's what it looks like:"); },
+      function () { show("Copying is blocked here. Press and hold the picture below, then tap Copy or Save."); });
   }
   function personText(A, id) {
     var l = [nm(id).toUpperCase(), resultWords(A, id), "", nm(id) + "'s part of everything: " + money(A.share[id]) + (A.paid[id] ? ". Paid " + money(A.paid[id]) + " at the table." : ".")];
@@ -906,6 +958,8 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     if (t.dataset.expand) { var x = +t.dataset.expand; expanded[x] = !expanded[x]; return render(); }
     if (t.id === "swRound") { st.roundUp = !st.roundUp; return render(); }
     if (t.id === "copyAll") return copyText(allText(calcAll()), t);
+    if (t.id === "copyPayPic") return copyPayPicture(t);
+    if (t.id === "copyPayText") return copyText(payText(calcAll()), t);
     if (t.dataset.copyp) return copyText(personText(calcAll(), +t.dataset.copyp), t);
     if (t.dataset.copypic) return copyPersonPicture(t, +t.dataset.copypic);
     if (t.dataset.savepic) return savePersonPicture(t, +t.dataset.savepic);
