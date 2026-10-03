@@ -313,7 +313,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
 </div>
 
 <div class="dock" aria-label="Live balances"><div class="dockin">
-  <div class="dstat"><span>Who pays</span><button class="dleft" id="dleft"></button></div>
+  <div class="dstat"><span id="dockLabel">Who pays</span><button class="dleft" id="dleft"></button></div>
   <div class="pills" id="pills"></div>
 </div></div>
 <div class="toast" id="toast" hidden><span id="toastMsg"></span><button id="undoBtn">Undo</button></div>
@@ -499,8 +499,8 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       list.push({ title: billHead(false), grand: c.grand, payer: S.checkPayer === -1 ? null : nm(S.checkPayer), all: c.all, unassigned: c.unassigned });
       c.bal.forEach(function (v, k) {
         var key = nm(k).trim().toLowerCase();
-        if (!(key in map)) { map[key] = { name: nm(k), bal: 0, share: 0, paid: 0, h: HUES[order.length % HUES.length], venmo: "" }; order.push(key); }
-        map[key].bal += v; map[key].share += c.share[k]; map[key].paid += c.paid[k]; if (!map[key].venmo && S.venmo[k]) map[key].venmo = S.venmo[k];
+        if (!(key in map)) { map[key] = { name: nm(k), bal: 0, share: 0, paid: 0, h: HUES[order.length % HUES.length], venmo: "", byBill: [] }; order.push(key); }
+        map[key].bal += v; map[key].share += c.share[k]; map[key].paid += c.paid[k]; map[key].byBill.push({ title: billHead(false), bal: v }); if (!map[key].venmo && S.venmo[k]) map[key].venmo = S.venmo[k];
       });
       if (S.checkPayer === -1) server += c.remaining;
     }); });
@@ -538,13 +538,31 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     l.push("  Total: " + money(cb.people.reduce(function (a, p) { return a + p.end; }, 0)));
     return l.join("\n");
   }
+  function isMulti() { return bills.filter(function (b) { return b.items.length; }).length >= 2; }
+  function same(a, b) { return String(a).trim().toLowerCase() === String(b).trim().toLowerCase(); }
+  function comboPerson(name) { var cb = combined(); for (var k = 0; k < cb.people.length; k++) if (same(cb.people[k].name, name)) return cb.people[k]; return null; }
+  function payList(c) { // the payments to show: all bills combined when there is more than one bill
+    if (isMulti() && items.length) return combined().xfers.map(function (x) { return { from: x.from.name, to: x.to.name, amt: x.amt, h: x.from.h, link: x.to.server ? "" : comboVenmo(x.to, shownAmt(x.amt)) }; });
+    return c.xfers.filter(function (x) { return x.amt >= 1; }).map(function (x) { return { from: nm(x.from), to: nm(x.to), amt: x.amt, h: hue(x.from), link: venmoLink(x.to, shownAmt(x.amt)) }; });
+  }
+  function comboWords(name) { // "Nick pays Mike $266.29" style summary for one person across all bills
+    var xs = combined().xfers.filter(function (x) { return same(x.from.name, name) || same(x.to.name, name); });
+    if (!xs.length) return name + " is all square";
+    var outs = xs.filter(function (x) { return same(x.from.name, name); }), ins = xs.filter(function (x) { return same(x.to.name, name); });
+    var parts = [];
+    if (outs.length) parts.push(name + " pays " + outs.map(function (x) { return x.to.name + " " + money(shownAmt(x.amt)); }).join(" and "));
+    if (ins.length) parts.push(name + " gets " + money(ins.reduce(function (a, x) { return a + shownAmt(x.amt); }, 0)) + " back (" + ins.map(function (x) { return x.from.name + " " + money(shownAmt(x.amt)); }).join(", ") + ")");
+    return parts.join(", and ");
+  }
   function comboAv(p) { return '<span class="av lg" style="--h:' + p.h + (p.server ? ';background:var(--surface-2);color:var(--ink)' : "") + '">' + (p.server ? "$" : esc(p.name.charAt(0).toUpperCase())) + "</span>"; }
   function paintCombo() {
     var el = $("#combo"); if (!el) return;
     var used = bills.filter(function (b) { return b.items.length; }).length;
-    if (used < 2) { el.innerHTML = '<div class="explain">Did someone else pay a different bill, like the bar tab? Tap <strong>+ New bill</strong> at the top, add it, and pick who paid it. All bills then get added together right here.</div>'; return; }
+    var hint = $("#comboHint");
+    if (used < 2) { el.innerHTML = ""; if (hint) hint.innerHTML = '<div class="explain" style="margin-top:16px">Did someone else pay a different bill, like the bar tab? Tap <strong>+ New bill</strong> at the top, add it, and pick who paid it. Then this step adds all bills together so money changes hands as few times as possible.</div>'; return; }
+    if (hint) hint.innerHTML = "";
     var cb = combined();
-    el.innerHTML = '<p class="q" style="margin:26px 0 4px">All ' + used + ' bills together</p><p class="hint" style="margin:0 0 10px">Each bill was paid in full (food, tax and tip) by one person. This combines them into the fewest payments.</p>' +
+    el.innerHTML = '<p class="q" style="margin:0 0 10px">All ' + used + ' bills added together</p>' +
       '<div class="card" style="margin-bottom:12px">' + cb.bills.map(function (b) { return '<div class="line"><span>' + esc(b.title) + "<small>" + (b.payer ? "paid by " + esc(b.payer) : "not paid yet") + (b.all ? "" : " · " + money(b.unassigned) + " not assigned") + "</small></span><b>" + money(b.grand) + "</b></div>"; }).join("") + "</div>" +
       (cb.ready ? "" : '<div class="warnbox" style="margin-bottom:12px">Some bills still have food without a name, so these numbers aren\'t final.</div>') +
       '<div class="stack">' + (cb.xfers.length ? cb.xfers.map(function (x, k) {
@@ -553,6 +571,12 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
           '<div class="words"><span><strong>' + esc(x.from.name) + "</strong> pays <strong>" + esc(x.to.name) + "</strong></span><b>" + money(a) + "</b></div>" +
           (link ? '<div class="venmo"><a href="' + esc(link) + '" target="_blank" rel="noopener">Pay ' + esc(x.to.name) + " on Venmo</a></div>" : "") + "</div>";
       }).join("") : '<div class="card allsquare">Across all bills, everyone is all square.</div>') + "</div>" +
+      '<div class="card" style="margin-top:12px"><p class="q" style="margin:0 0 2px">How we got there</p><p class="hint" style="margin:0 0 4px">What each person owes (+) or is owed (−) on each bill, added up.</p>' +
+      cb.people.map(function (pp) {
+        return '<div class="endrow" style="align-items:start">' + comboAv(pp) + '<span style="min-width:0"><span class="nm">' + esc(pp.name) + "</span>" +
+          pp.byBill.map(function (bb) { return '<span class="sub">' + esc(bb.title) + ": " + (Math.abs(bb.bal) < 1 ? "even" : bb.bal > 0 ? "owes +" + money(bb.bal) : "is owed −" + money(-bb.bal)) + "</span>"; }).join("") +
+          '<span class="sub" style="color:var(--ink);font-weight:700">' + esc(comboWords(pp.name)) + "</span></span><b" + (pp.bal < 0 ? ' style="color:var(--ok)"' : "") + ">" + (Math.abs(pp.bal) < 1 ? money(0) : (pp.bal > 0 ? "+" : "−") + money(Math.abs(pp.bal))) + "</b></div>";
+      }).join("") + "</div>" +
       '<div style="margin-top:12px">' + endCardHTML("In the end, across all bills", cb.people.map(function (pp) {
         var out = 0, inn = 0; cb.xfers.forEach(function (x) { var a = shownAmt(x.amt); if (x.from === pp) out += a; if (x.to === pp) inn += a; });
         return { av: comboAv(pp), name: pp.name, note: endNote(pp.paid, out - inn), end: pp.end };
@@ -815,21 +839,29 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     return "https://venmo.com/?txn=pay&audience=private&recipients=" + encodeURIComponent(S.venmo[to]) + "&amount=" + (amt / 100).toFixed(2) + "&note=" + encodeURIComponent(billHead(false));
   }
   function renderSettle() {
-    $("#s5").innerHTML = '<div class="sh"><span class="num">5</span><h2>Who pays who</h2></div><p class="say">This is the answer. Each line is one payment to make.</p>' +
-      '<div id="xferWarn"></div><div class="stack" id="xfers"></div>' +
-      '<button class="switch" role="switch" id="swRound" aria-checked="' + S.roundUp + '" style="margin-top:12px"><span class="txt"><b>Round up to whole dollars</b><small>Easier to pay. The person being paid gets a few cents extra.</small></span><span class="tg"></span></button>' +
-      '<p class="q" style="margin:22px 0 10px">Everyone\'s total <span class="hint" style="font-weight:400">· tap a name to see their receipt</span></p><div class="stack" id="people"></div>' +
-      '<div id="endCard" style="margin-top:12px"></div>' +
-      '<div class="card" style="margin-top:12px"><div class="check"><span>Food</span><b id="cFood"></b></div><div class="check"><span>Tax</span><b id="cTax"></b></div><div class="check"><span>Tip</span><b id="cTip"></b></div>' +
-        '<div class="check"><span style="color:var(--ink);font-weight:700">Whole bill</span><b id="cGrand"></b></div><div class="check" id="cPaidRow" hidden><span>Paid separately</span><b id="cPaid"></b></div></div>' +
-      '<div id="combo" style="margin-top:16px"></div>' +
+    $("#s5").innerHTML = '<div class="sh"><span class="num">5</span><h2>Who pays who</h2></div><p class="say" id="s5say">This is the answer. Each line is one payment to make.</p>' +
+      '<div id="combo"></div>' +
+      '<button class="switch" role="switch" id="swRound" aria-checked="' + S.roundUp + '" style="margin:12px 0"><span class="txt"><b>Round up to whole dollars</b><small>Easier to pay. The person being paid gets a few cents extra.</small></span><span class="tg"></span></button>' +
+      '<div id="billHead"></div><div id="billBody">' +
+        '<div id="xferWarn"></div><div class="stack" id="xfers"></div>' +
+        '<p class="q" style="margin:22px 0 10px">Everyone\'s total <span class="hint" style="font-weight:400">· tap a name to see their receipt</span></p><div class="stack" id="people"></div>' +
+        '<div id="endCard" style="margin-top:12px"></div>' +
+        '<div class="card" style="margin-top:12px"><div class="check"><span>Food</span><b id="cFood"></b></div><div class="check"><span>Tax</span><b id="cTax"></b></div><div class="check"><span>Tip</span><b id="cTip"></b></div>' +
+          '<div class="check"><span style="color:var(--ink);font-weight:700">Whole bill</span><b id="cGrand"></b></div><div class="check" id="cPaidRow" hidden><span>Paid separately</span><b id="cPaid"></b></div></div>' +
+      "</div>" +
+      '<div id="comboHint"></div>' +
       '<p class="q" style="margin:24px 0 10px">Send it to your friends</p>' +
       '<div class="card stack"><button class="primary" id="copy">Copy the full breakdown</button><p class="hint" style="margin:0">Every item with what each person owes for it, then who pays who. Paste it in your group text.</p><pre class="copybox" id="preview"></pre></div>' +
       '<div class="card stack" style="margin-top:12px"><p class="q" style="margin:0">Or send a picture</p><div class="chips" id="shareChips"></div><img id="shareimg" alt="Picture of the breakdown">' +
         '<div class="btnrow"><button class="primary" id="copyimg">Copy picture</button><button class="ghost" id="saveimg"' + (dlFn ? "" : " hidden") + '>Save to phone</button></div><p class="hint" id="imgnote" style="margin:0">If copying doesn\'t work, press and hold the picture, then tap Copy or Save.</p></div>';
   }
+  var showBillOnly = false;
   function paintSettle(c) {
     if (!$("#xfers")) return;
+    var multi = isMulti() && items.length > 0;
+    $("#s5say").textContent = multi ? "All your bills are added together, so money changes hands as few times as possible. Each line is one payment to make." : "This is the answer. Each line is one payment to make.";
+    $("#billHead").innerHTML = multi ? '<button class="ghost" id="toggleBill">' + (showBillOnly ? "Hide" : "Show") + " the numbers for just “" + esc(billHead(false)) + "”</button>" + (showBillOnly ? '<p class="hint" style="margin:10px 0 0">These are for this bill alone. Don\'t pay these. Use the combined payments above.</p>' : "") : "";
+    $("#billBody").hidden = multi && !showBillOnly;
     $("#xferWarn").innerHTML = !items.length ? '<div class="warnbox">Add what you ordered in step 2 first.</div>' : !c.all ? '<div class="warnbox" style="margin-bottom:12px">' + money(c.unassigned) + ' of food doesn\'t have a name yet, so these numbers aren\'t final. <button class="linkbtn" data-jump="1" style="color:inherit;text-decoration:underline">Show me</button></div>' : "";
     var xs = c.xfers.filter(function (x) { return x.amt >= 1; });
     $("#xfers").innerHTML = !items.length ? "" : xs.length ? xs.map(function (x, k) {
@@ -870,15 +902,21 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     if (S.checkPayer === i) paidRows += '<div class="line"><span>Paid the bill' + "<small>" + (c.paidTotal ? "what was left after the items paid separately" : "food, tax and tip") + '</small></span><b class="minus">-' + money(c.remaining) + "</b></div>";
     items.forEach(function (it) { if (it.paidBy === i) paidRows += '<div class="line"><span>Paid for ' + esc(it.name) + '<small>paid on their own</small></span><b class="minus">-' + money(it.price) + "</b></div>"; });
     var xs = c.xfers.filter(function (x) { return x.amt >= 1 && (x.from === i || x.to === i); });
-    var result = Math.abs(b) < 1 ? name + " is all square." : back
+    var cp = isMulti() ? comboPerson(nm(i)) : null;
+    var result = cp ? (Math.abs(b) < 1 ? name + " is even on this bill" : b > 0 ? name + " owes " + money(b) + " for this bill" : name + " is owed " + money(-b) + " for this bill") +
+        ". Adding all bills together: " + esc(comboWords(nm(i))) + "."
+      : Math.abs(b) < 1 ? name + " is all square." : back
       ? name + " paid " + money(c.paid[i]) + " but only owes " + money(c.share[i]) + ", so " + name + " gets " + money(-b) + " back" + (xs.length ? " (" + xs.map(function (x) { return esc(nm(x.from)) + " pays " + money(shownAmt(x.amt)); }).join(", ") + ")" : "") + "."
       : (c.paid[i] ? name + " already paid " + money(c.paid[i]) + ", so " + name + " still owes " : (S.checkPayer >= 0 ? esc(nm(S.checkPayer)) + " paid the bill" : "Nobody has paid the bill yet") + ", so " + name + " owes ") +
         (xs.length === 1 ? esc(nm(xs[0].to)) + " " + money(shownAmt(xs[0].amt)) : money(b) + (xs.length ? ": " + xs.map(function (x) { return money(shownAmt(x.amt)) + " to " + esc(nm(x.to)); }).join(" and ") : "")) + ".";
     var story = name + " had " + money(c.food[i]) + " of food" + (rows ? "" : " (nothing assigned yet)") + ". Tax adds " + money(c.taxO[i]) + " and the tip adds " + money(c.tipO[i]) + ", so " + name + "'s share of the bill is <strong>" + money(c.share[i]) + "</strong>. " + result;
-    var finalLine = Math.abs(b) < 1 ? '<div class="line final"><span>All square</span><b>' + money(0) + "</b></div>"
+    var finalLine = cp ? '<div class="line"><span>This bill<small>' + (b > 0 ? "owes" : b < 0 ? "is owed" : "even") + "</small></span><b>" + (Math.abs(b) < 1 ? money(0) : (b > 0 ? "+" : "−") + money(Math.abs(b))) + "</b></div>" +
+        '<div class="line final' + (cp.bal < 0 ? " back" : "") + '"><span>All bills: ' + esc(comboWords(nm(i))) + "</span><b" + (cp.bal < 0 ? ' class="minus"' : "") + ">" + money(Math.abs(cp.bal)) + "</b></div>"
+      : Math.abs(b) < 1 ? '<div class="line final"><span>All square</span><b>' + money(0) + "</b></div>"
       : back ? '<div class="line final back"><span>' + name + ' gets back</span><b class="minus">' + money(-b) + "</b></div>"
       : '<div class="line final"><span>' + name + " pays" + (xs.length === 1 ? " " + esc(nm(xs[0].to)) : "") + "</span><b>" + money(xs.length ? xs.reduce(function (a, x) { return a + shownAmt(x.amt); }, 0) : b) + "</b></div>";
-    return '<div class="card why" style="--h:' + hue(i) + '"><div class="whead">' + av(i, "lg") + "<h3>" + name + '</h3><div class="res' + (back ? " back" : "") + '"><small>' + (Math.abs(b) < 1 ? "all square" : back ? "gets back" : "pays") + "</small><b>" + money(Math.abs(b)) + "</b></div></div>" +
+    var hb = cp ? cp.bal : b;
+    return '<div class="card why" style="--h:' + hue(i) + '"><div class="whead">' + av(i, "lg") + "<h3>" + name + '</h3><div class="res' + (hb < 0 ? " back" : "") + '"><small>' + (Math.abs(hb) < 1 ? "all square" : hb < 0 ? "gets back" : "pays") + (cp ? " · all bills" : "") + "</small><b>" + money(Math.abs(hb)) + "</b></div></div>" +
       '<div class="wbody"><div class="story">' + story + "</div>" +
       '<p class="wsec">What ' + name + " is paying for</p>" + (rows || '<p class="hint">Nothing assigned yet.</p>') +
       '<div class="line sum"><span>Food</span><b>' + money(c.food[i]) + "</b></div>" +
@@ -891,7 +929,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   }
   function paintWhy(c) {
     var el = $("#s6"); if (!el) return;
-    el.innerHTML = '<div class="sh"><span class="num">6</span><h2>Why everyone owes what they owe</h2></div><p class="say">One card per person: exactly what they\'re paying for and how it adds up.</p>' +
+    el.innerHTML = '<div class="sh"><span class="num">6</span><h2>Why everyone owes what they owe</h2></div><p class="say">One card per person: exactly what they\'re paying for and how it adds up.' + (isMulti() ? " These cards show “" + esc(billHead(false)) + "”. Switch bills at the top to see the others." : "") + "</p>" +
       (items.length ? '<div class="stack">' + c.share.map(function (s, i) { return whyCard(c, i); }).join("") + "</div>" : '<div class="card empty">Add what you ordered in step 2 first.</div>');
   }
 
@@ -933,14 +971,15 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     return l;
   }
   function xferLines(c, only) {
-    var xs = c.xfers.filter(function (x) { return x.amt >= 1 && (only == null || x.from === only || x.to === only); });
+    var xs = payList(c).filter(function (x) { return only == null || same(x.from, nm(only)) || same(x.to, nm(only)); });
     if (!xs.length) return ["  Everyone is all square."];
     var l = [];
-    xs.forEach(function (x) { var a = shownAmt(x.amt), link = venmoLink(x.to, a); l.push("  • " + nm(x.from) + " pays " + nm(x.to) + " " + money(a)); if (link) l.push("    Venmo: " + link); });
+    xs.forEach(function (x) { l.push("  • " + x.from + " pays " + x.to + " " + money(shownAmt(x.amt))); if (x.link) l.push("    Venmo: " + x.link); });
     return l;
   }
+  function billsLine() { return isMulti() ? ["Includes all bills: " + combined().bills.map(function (b) { return b.title + " " + money(b.grand) + (b.payer ? " (paid by " + b.payer + ")" : ""); }).join(", ")] : []; }
   function summaryText(c) {
-    var l = header(c).concat(["", "WHO PAYS WHO" + (S.roundUp ? " (rounded up)" : "")], xferLines(c), ["", "EVERY ITEM AND WHO OWES WHAT"]);
+    var l = header(c).concat(["", "WHO PAYS WHO" + (isMulti() ? " (all bills together)" : "") + (S.roundUp ? " (rounded up)" : "")], billsLine(), xferLines(c), ["", "EVERY ITEM AND WHO OWES WHAT" + (isMulti() ? " (this bill)" : "")]);
     items.forEach(function (it) { l = l.concat(itemLines(it), [""]); });
     l.push("", "EACH PERSON");
     c.share.forEach(function (s, i) {
@@ -955,10 +994,11 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     return l.join("\n");
   }
   function personText(c, i) {
-    var b = c.bal[i], l = [billHead(false), nm(i).toUpperCase() + (Math.abs(b) < 1 ? " is all square" : b < 0 ? " gets back " + money(-b) : " pays " + money(b)), ""];
+    var cp = isMulti() ? comboPerson(nm(i)) : null, b = cp ? cp.bal : c.bal[i];
+    var l = [billHead(false), nm(i).toUpperCase() + (Math.abs(b) < 1 ? " is all square" : b < 0 ? " gets back " + money(-b) : " pays " + money(b)) + (cp ? " (all bills together)" : ""), ""];
     l.push(nm(i) + " had " + money(c.food[i]) + " of food. Tax adds " + money(c.taxO[i]) + " and the tip adds " + money(c.tipO[i]) + ", so " + nm(i) + "'s share is " + money(c.share[i]) + "." +
       (c.paid[i] ? " " + nm(i) + " already paid " + money(c.paid[i]) + "." : ""), "");
-    l = l.concat(xferLines(c, i), ["", "What " + nm(i) + " had:"]);
+    l = l.concat(billsLine(), xferLines(c, i), ["", "What " + nm(i) + " had" + (cp ? " on " + billHead(false) : "") + ":"]);
     items.forEach(function (it) {
       var sp = itemSplit(it); if (!sp[i]) return;
       var ids = sharesOf(it);
@@ -992,7 +1032,8 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     var meas = document.createElement("canvas").getContext("2d");
     var rows = items.filter(function (it) { return sharesOf(it).length && (who === "all" || itemSplit(it)[who] > 0); });
     rows.forEach(function (it) { it._bo = who === "all" && it.paidBy == null ? 74 : 112; it._h = it._bo + 52 + sharesOf(it).length * 44 + 16; });
-    var xs = c.xfers.filter(function (x) { return x.amt >= 1 && (who === "all" || x.from === who || x.to === who); });
+    var multi = isMulti(), cbp = multi && who !== "all" ? comboPerson(nm(who)) : null;
+    var xs = payList(c).filter(function (x) { return who === "all" || same(x.from, nm(who)) || same(x.to, nm(who)); });
     var HEAD = 330, GAP = 20, rowsH = rows.length ? rows.reduce(function (a, it) { return a + it._h + GAP; }, 0) : 140;
     var xH = 90 + Math.max(1, xs.length) * 74;
     var tot = who === "all" ? 0 : (5 + (c.paid[who] ? 1 : 0)) * 66 + 40;
@@ -1007,17 +1048,17 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     g.fillStyle = "#f4f6fc"; g.fillRect(0, 0, W, H);
     g.fillStyle = ACC; g.fillRect(0, 0, W, HEAD);
     text(fit(billHead(false).toUpperCase(), "700 28px " + SANS, IW), P, 78, "700 28px " + SANS, "rgba(255,255,255,.85)");
-    var b = who === "all" ? 0 : c.bal[who];
-    text(who === "all" ? "Who pays who" : fit(nm(who) + (Math.abs(b) < 1 ? " is all square" : b < 0 ? " gets back" : " pays"), "800 60px " + SANS, IW), P, 160, "800 60px " + SANS, "#fff");
-    text(who === "all" ? money(c.grand) : money(Math.abs(b)), P, 270, "500 108px " + MONO, "#fff");
-    if (who === "all") text("whole bill", W - P, 270, "500 34px " + SANS, "rgba(255,255,255,.85)", "right");
+    var b = who === "all" ? 0 : c.bal[who], hb = cbp ? cbp.bal : b;
+    text(who === "all" ? "Who pays who" : fit(nm(who) + (Math.abs(hb) < 1 ? " is all square" : hb < 0 ? " gets back" : " pays"), "800 60px " + SANS, IW), P, 160, "800 60px " + SANS, "#fff");
+    text(who === "all" ? money(multi ? combined().total : c.grand) : money(Math.abs(hb)), P, 270, "500 108px " + MONO, "#fff");
+    if (who === "all" || multi) text(who === "all" ? (multi ? "all bills" : "whole bill") : "all bills", W - P, 270, "500 34px " + SANS, "rgba(255,255,255,.85)", "right");
     var y = HEAD + 40, ty;
-    card(y, xH); text("PAYMENTS" + (S.roundUp ? " (ROUNDED UP)" : ""), P + 28, y + 52, "700 26px " + SANS, MUTED);
+    card(y, xH); text("PAYMENTS" + (multi ? " (ALL BILLS TOGETHER)" : "") + (S.roundUp ? " (ROUNDED UP)" : ""), P + 28, y + 52, "700 26px " + SANS, MUTED);
     ty = y + 118;
     if (!xs.length) text("Everyone is all square", P + 28, ty, "600 36px " + SANS, OK);
     xs.forEach(function (x) {
-      circ(P + 44, ty - 12, 16, col(x.from));
-      text(fit(nm(x.from) + "  →  " + nm(x.to), "600 36px " + SANS, IW - 330), P + 72, ty, "600 36px " + SANS, INK);
+      circ(P + 44, ty - 12, 16, "hsl(" + x.h + " 68% 47%)");
+      text(fit(x.from + "  →  " + x.to, "600 36px " + SANS, IW - 330), P + 72, ty, "600 36px " + SANS, INK);
       text(money(shownAmt(x.amt)), P + IW - 28, ty, "600 40px " + MONO, ACC, "right"); ty += 74;
     });
     y += xH + 30;
@@ -1057,7 +1098,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       if (c.paid[who]) { text("Already paid", L, ty, "500 34px " + SANS, OK); text("-" + money(c.paid[who]), R, ty, "500 36px " + MONO, OK, "right"); ty += 66; }
       g.fillStyle = LINE; g.fillRect(L, ty - 44, IW - 56, 2); ty += 4;
       circ(L + 16, ty - 12, 16, col(who));
-      text(Math.abs(b) < 1 ? "All square" : b < 0 ? "Gets back" : "Pays", L + 48, ty, "800 38px " + SANS, INK); text(money(Math.abs(b)), R, ty, "800 44px " + MONO, b < 0 ? OK : ACC, "right");
+      text((multi ? "This bill: " : "") + (Math.abs(b) < 1 ? "All square" : b < 0 ? (multi ? "is owed" : "Gets back") : (multi ? "owes" : "Pays")), L + 48, ty, "800 38px " + SANS, INK); text(money(Math.abs(b)), R, ty, "800 44px " + MONO, b < 0 ? OK : ACC, "right");
     }
     text("Food " + money(c.sub) + " · Tax " + money(c.tax) + " · Tip " + money(c.tip), W / 2, H - 50, "500 24px " + MONO, MUTED, "center");
     return cv;
@@ -1109,7 +1150,12 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       $("#pleft").textContent = !items.length ? "" : c.unassigned >= 1 ? money(c.unassigned) + " still needs a name" : "All done!";
     }
     renderPaid(c); paintTip(c); paintSettle(c); paintWhy(c);
-    $("#pills").innerHTML = c.bal.map(function (b, i) {
+    var multi = isMulti() && items.length > 0;
+    $("#dockLabel").textContent = multi ? "Who pays · all bills" : "Who pays";
+    $("#pills").innerHTML = multi ? combined().people.map(function (pp) {
+      var back = pp.bal < 0, idx = -1; for (var k = 0; k < S.n; k++) if (same(nm(k), pp.name)) idx = k;
+      return '<button class="pill' + (back ? " back" : "") + '"' + (idx >= 0 ? ' data-sheet="' + idx + '"' : "") + '><span class="av" style="--h:' + pp.h + '">' + esc(pp.name.charAt(0).toUpperCase()) + '</span><span><span class="nm">' + esc(pp.name) + (Math.abs(pp.bal) < 1 ? " · square" : back ? " gets" : " pays") + "</span><b>" + money(Math.abs(pp.bal)) + "</b></span></button>";
+    }).join("") : c.bal.map(function (b, i) {
       var back = b < 0;
       return '<button class="pill' + (back ? " back" : "") + '" data-sheet="' + i + '">' + av(i) + '<span><span class="nm">' + esc(nm(i)) + (Math.abs(b) < 1 ? " · square" : back ? " gets" : " pays") + "</span><b>" + money(Math.abs(b)) + "</b></span></button>";
     }).join("");
@@ -1170,6 +1216,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     if (t.id === "swRound") { S.roundUp = !S.roundUp; t.setAttribute("aria-checked", S.roundUp); return paintAll(); }
     if (t.id === "copy") return copyText(summaryText(compute()), t);
     if (t.id === "copyCombo") return copyText(comboText(combined()), t);
+    if (t.id === "toggleBill") { showBillOnly = !showBillOnly; return paintAll(); }
     if (t.dataset.sw != null) { S.shareWho = t.dataset.sw === "all" ? "all" : +t.dataset.sw; save(); return paintShare(); }
     if (t.id === "copyimg") return copyImage(t);
     if (t.id === "saveimg") return saveImage(t);
