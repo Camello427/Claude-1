@@ -182,6 +182,16 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
 .paidrow .chip { padding: 3px 10px 3px 3px; font-size: 13px; }
 .paidrow .chip .av { width: 22px; height: 22px; font-size: 11px; }
 .ptag { display: inline-block; font: 700 11px var(--f-body); letter-spacing: .02em; color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); border-radius: 6px; padding: 2px 6px; margin-left: 6px; vertical-align: 2px; }
+.paylist { display: flex; flex-direction: column; gap: 8px; }
+.payrow { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 12px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface-2); transition: background .2s, border-color .2s, transform .12s; }
+.payrow:active { transform: scale(.98); }
+.payrow .box { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; color: transparent; font: 700 14px/1 var(--f-body); transition: background .2s, border-color .2s, color .2s; }
+.payrow .pn { min-width: 0; font-weight: 500; overflow-wrap: anywhere; }
+.payrow .pn small { display: block; color: var(--muted); font-size: 12px; font-weight: 400; }
+.payrow .pa { font: 500 15px var(--f-mono); font-variant-numeric: tabular-nums; }
+.payrow[aria-pressed="true"] { background: color-mix(in srgb, var(--ok) 13%, var(--surface)); border-color: var(--ok); }
+.payrow[aria-pressed="true"] .box { background: var(--ok); border-color: var(--ok); color: #fff; }
+.chip .mono { font: 500 12px var(--f-mono); color: var(--muted); }
 .ptag[hidden], .check[hidden] { display: none; }
 .olbl { grid-column: 1 / -1; margin-top: 8px; font: 700 11px var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .olbl.back { color: var(--ok); }
@@ -215,6 +225,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   <section class="blk" id="sBills" style="margin-top:18px"></section>
   <section class="blk" id="sPeople"></section>
   <section class="blk" id="sDishes"></section>
+  <section class="blk" id="sPaid"></section>
   <section class="blk" id="sTip"></section>
   <section class="blk" id="sTotals"></section>
 </div>
@@ -447,6 +458,23 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     });
   }
 
+  /* ---- who already paid ---- */
+  var payWho = 0;
+  function renderPaid() {
+    var el = $("#sPaid"); if (!el) return;
+    if (payWho >= S.n) payWho = 0;
+    var c = compute(), chips = "";
+    for (var i = 0; i < S.n; i++) chips += '<button class="chip" data-paywho="' + i + '" style="--h:' + hue(i) + '" aria-pressed="' + (payWho === i) + '">' + av(i) + '<span class="t">' + esc(nm(i)) + "</span>" + (c.credit[i] ? '<span class="mono">' + money(c.credit[i]) + "</span>" : "") + "</button>";
+    var rows = items.map(function (it) {
+      var other = it.paidBy != null && it.paidBy !== payWho ? "<small>Paid by " + esc(nm(it.paidBy)) + "</small>" : "";
+      return '<button class="payrow" data-payitem="' + it.id + '" aria-pressed="' + (it.paidBy === payWho) + '"><span class="box">✓</span><span class="pn">' + esc(it.name) + (it.qty > 1 ? " ×" + it.qty : "") + other + '</span><span class="pa">' + money(it.price) + "</span></button>";
+    }).join("");
+    var mine = items.filter(function (it) { return it.paidBy === payWho; });
+    var sum = mine.length ? esc(nm(payWho)) + " paid " + money(c.credit[payWho]) + " (" + mine.length + (mine.length === 1 ? " item" : " items") + "). That comes off what " + esc(nm(payWho)) + " owes on the rest of the bill." : "Tap the items " + esc(nm(payWho)) + " already paid for. Everyone still owes their share; the payer just gets credit.";
+    el.innerHTML = '<div class="sh"><h2>Who already paid?</h2><span class="hint">Optional</span></div><div class="card stack"><div class="chips">' + chips + "</div>" +
+      (items.length ? '<div class="paylist">' + rows + "</div>" : '<div class="empty" style="padding:6px">Add items first.</div>') + '<div class="hint">' + sum + "</div></div>";
+  }
+
   /* ---- tip & tax ---- */
   function renderTip() {
     var pre = [0, 15, 18, 20, 25].map(function (v) { return '<button data-pct="' + v + '" aria-pressed="' + (S.tipMode === "pct" && S.tipPct === v) + '">' + (v ? v + "%" : "None") + "</button>"; }).join("");
@@ -608,6 +636,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     var c = compute();
     $("#billtotal").textContent = money(c.grand);
     $("#meta").textContent = billHead(true);
+    renderPaid();
     $("#pfill").style.width = (items.length ? c.doneCount / items.length * 100 : 0) + "%";
     $("#pcount").textContent = items.length ? c.doneCount + " of " + items.length + " dishes assigned" : "No items yet";
     $("#pleft").textContent = !items.length ? "" : c.unassigned >= 0.5 ? money(c.unassigned) + " left to assign" : "All assigned";
@@ -641,6 +670,8 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       else { var ob = bills[cur]; bills[cur] = newBill(ob.kind, ob.title, ob.id); }
       bind(); renderAll(); window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" }); return;
     }
+    if (t.dataset.paywho != null) { payWho = +t.dataset.paywho; return renderPaid(); }
+    if (t.dataset.payitem != null) { var pit = byId(+t.dataset.payitem); if (!pit) return; pit.paidBy = pit.paidBy === payWho ? null : payWho; pit.payOpen = pit.paidBy != null; paintDish(pit); return paintAll(); }
     if (t.dataset.bill != null) return goBill(+t.dataset.bill);
     if (t.id === "newBill") {
       var nb = newBill("manual", "Bill " + (bills.length + 1), nextBillId++); nb.S.n = S.n; nb.S.names = S.names.slice();
