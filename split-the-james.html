@@ -370,9 +370,14 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     return f;
   }
   function cleanShares(x, n) {
-    var o = {}, sum = 0;
-    Object.keys((x && x.shares) || {}).forEach(function (k) { var v = +x.shares[k]; if (+k >= 0 && +k < n && v >= 0 && v <= 100) { o[+k] = Math.round(v); sum += o[+k]; } });
-    return sum === 100 ? o : {};
+    var o = {}, sum = 0, ks = [];
+    Object.keys((x && x.shares) || {}).forEach(function (k) { var v = +x.shares[k]; if (+k >= 0 && +k < n && v >= 0 && v <= 100 && isFinite(v)) { o[+k] = v; sum += v; ks.push(+k); } });
+    if (Math.abs(sum - 100) > 0.05) return {};
+    // older saves stored even splits as whole numbers (34/33/33): make them exact again
+    var vals = ks.map(function (k) { return o[k]; }), mx = Math.max.apply(null, vals), mn = Math.min.apply(null, vals);
+    if (ks.length > 1 && mx - mn <= 1 && vals.every(function (v) { return v === Math.round(v); })) return evenShares(ks.sort(function (a, b) { return a - b; }));
+    ks.forEach(function (k) { o[k] = o[k] * 100 / sum; });
+    return o;
   }
   function restore(d) { // accepts a saved v2 object; ignores anything malformed
     if (!d || d.v !== 2 || !Array.isArray(d.bills) || !d.bills.length) return false;
@@ -423,7 +428,8 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     raw.map(function (r, i) { return [r - Math.floor(r), i]; }).sort(function (a, b) { return b[0] - a[0]; }).slice(0, rem).forEach(function (p) { out[p[1]]++; });
     return out;
   }
-  function evenShares(ids) { var v = lr(100, ids.map(function () { return 1; })), o = {}; ids.forEach(function (id, i) { o[id] = v[i]; }); return o; }
+  function evenShares(ids) { var o = {}; ids.forEach(function (id) { o[id] = 100 / ids.length; }); return o; }
+  function pcs(v) { var r = Math.round(v * 10) / 10; return (r % 1 ? r.toFixed(1) : r.toFixed(0)) + "%"; }
   function everyone() { var a = []; for (var k = 0; k < S.n; k++) a.push(k); return a; }
 
   /* ================= math ================= */
@@ -610,7 +616,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     items.forEach(function (it) {
       if (it.paidBy != null && it.paidBy >= n) it.paidBy = null;
       var ids = Object.keys(it.shares).map(Number), keep = ids.filter(function (p) { return p < n; });
-      if (keep.length !== ids.length) { var v = lr(100, keep.map(function (p) { return it.shares[p]; })), o = {}; keep.forEach(function (p, k) { o[p] = v[k]; }); it.shares = keep.length ? o : {}; }
+      if (keep.length !== ids.length) { var z = keep.reduce(function (a, p) { return a + it.shares[p]; }, 0), o = {}; keep.forEach(function (p) { o[p] = z ? it.shares[p] * 100 / z : 100 / keep.length; }); it.shares = keep.length ? o : {}; }
     });
     renderPeople(); renderDishes(); paintAll();
     var c = $("#count"); if (c) c.classList.add("bump");
@@ -654,7 +660,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   }
   function amtsHTML(it, sp) {
     var ids = sharesOf(it);
-    return ids.map(function (p) { return '<span class="who">' + dot(p) + "<span>" + esc(nm(p)) + '</span></span><span class="pc">' + (ids.length > 1 ? it.shares[p] + "%" : "") + '</span><span class="am">' + money(sp[p]) + "</span>"; }).join("");
+    return ids.map(function (p) { return '<span class="who">' + dot(p) + "<span>" + esc(nm(p)) + '</span></span><span class="pc">' + (ids.length > 1 ? pcs(it.shares[p]) : "") + '</span><span class="am">' + money(sp[p]) + "</span>"; }).join("");
   }
   function splitHTML(it) {
     var ids = sharesOf(it);
@@ -664,8 +670,8 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     var amts = '<div class="tbl">' + amtsHTML(it, sp) + "</div>";
     if (ids.length === 1) return bar + amts;
     var sl = it.open ? '<div class="sliders">' + ids.map(function (p) {
-      return '<div class="srow"><div class="lab">' + av(p) + "<span>" + esc(nm(p)) + '</span><span class="pc" data-pc="' + p + '">' + it.shares[p] + '%</span><span class="am" data-am="' + p + '">' + money(sp[p]) + "</span></div>" +
-        '<input type="range" min="0" max="100" step="1" value="' + it.shares[p] + '" data-sl="' + p + '" style="--c:hsl(' + hue(p) + ' var(--ps) var(--pl));--p:' + it.shares[p] + '%" aria-label="' + esc(nm(p)) + ' share of ' + esc(it.name) + '"></div>';
+      return '<div class="srow"><div class="lab">' + av(p) + "<span>" + esc(nm(p)) + '</span><span class="pc" data-pc="' + p + '">' + pcs(it.shares[p]) + '</span><span class="am" data-am="' + p + '">' + money(sp[p]) + "</span></div>" +
+        '<input type="range" min="0" max="100" step="1" value="' + Math.round(it.shares[p]) + '" data-sl="' + p + '" style="--c:hsl(' + hue(p) + ' var(--ps) var(--pl));--p:' + it.shares[p] + '%" aria-label="' + esc(nm(p)) + ' share of ' + esc(it.name) + '"></div>';
     }).join("") + '<button class="linkbtn" data-even="1" style="justify-self:start">Make it even again</button></div>' : "";
     return bar + (it.open ? "" : amts) + '<div class="sline"><button class="linkbtn" data-open="1">' + (it.open ? "Done changing" : "Change how it's split") + "</button></div>" + sl;
   }
@@ -679,7 +685,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
   }
   function setShare(it, p, v) {
     var ids = sharesOf(it).filter(function (x) { return x !== p; }); v = Math.max(0, Math.min(100, Math.round(v)));
-    var w = ids.map(function (x) { return it.shares[x]; }), z = w.reduce(function (a, b) { return a + b; }, 0), vals = lr(100 - v, z ? w : w.map(function () { return 1; }));
+    var w = ids.map(function (x) { return it.shares[x]; }), z = w.reduce(function (a, b) { return a + b; }, 0), vals = w.map(function (x) { return z ? x * (100 - v) / z : (100 - v) / w.length; });
     it.shares[p] = v; ids.forEach(function (x, k) { it.shares[x] = vals[k]; });
   }
   function syncSliders(it) {
@@ -687,9 +693,9 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     var sp = itemSplit(it);
     sharesOf(it).forEach(function (p) {
       var s = $('[data-sl="' + p + '"]', el), pc = $('[data-pc="' + p + '"]', el), am = $('[data-am="' + p + '"]', el), b = $('[data-bp="' + p + '"]', el);
-      if (s && document.activeElement !== s) s.value = it.shares[p];
+      if (s && document.activeElement !== s) s.value = Math.round(it.shares[p]);
       if (s) s.style.setProperty("--p", it.shares[p] + "%");
-      if (pc) pc.textContent = it.shares[p] + "%";
+      if (pc) pc.textContent = pcs(it.shares[p]);
       if (am) am.textContent = money(sp[p]);
       if (b) b.style.width = it.shares[p] + "%";
     });
@@ -855,7 +861,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       var sp = itemSplit(it); if (!sp[i]) return;
       var others = sharesOf(it).filter(function (p) { return p !== i; });
       rows += '<div class="line"><span>' + esc(it.name) + (it.qty > 1 ? " ×" + it.qty : "") + "<small>" +
-        (others.length ? it.shares[i] + "% of " + money(it.price) + ", shared with " + others.map(function (p) { return esc(nm(p)); }).join(" and ") : "all " + name + "'s") + "</small></span><b>" + money(sp[i]) + "</b></div>";
+        (others.length ? pcs(it.shares[i]) + " of " + money(it.price) + ", shared with " + others.map(function (p) { return esc(nm(p)); }).join(" and ") : "all " + name + "'s") + "</small></span><b>" + money(sp[i]) + "</b></div>";
     });
     var foodPct = c.sub ? c.food[i] / c.sub * 100 : 0;
     var taxWhy = S.taxFollows && c.sub ? pctTxt(c.tax / c.sub * 100) + " sales tax on " + name + "'s food" : "the " + money(c.tax) + " tax split evenly between " + S.n;
@@ -895,7 +901,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     items.forEach(function (it) {
       var sp = itemSplit(it); if (!sp[i]) return;
       var shared = sharesOf(it).length > 1;
-      rows += '<div class="line"><span>' + esc(it.name) + (it.qty > 1 ? " ×" + it.qty : "") + "<small>" + (shared ? it.shares[i] + "% of " + money(it.price) + ", shared with " + sharesOf(it).filter(function (p) { return p !== i; }).map(function (p) { return esc(nm(p)); }).join(" and ") : "all theirs") + "</small></span><b>" + money(sp[i]) + "</b></div>";
+      rows += '<div class="line"><span>' + esc(it.name) + (it.qty > 1 ? " ×" + it.qty : "") + "<small>" + (shared ? pcs(it.shares[i]) + " of " + money(it.price) + ", shared with " + sharesOf(it).filter(function (p) { return p !== i; }).map(function (p) { return esc(nm(p)); }).join(" and ") : "all theirs") + "</small></span><b>" + money(sp[i]) + "</b></div>";
     });
     var xs = c.xfers.filter(function (x) { return x.amt >= 1 && (x.from === i || x.to === i); }).map(function (x) {
       return '<div class="line"><span>' + (x.from === i ? "Pay " + esc(nm(x.to)) : esc(nm(x.from)) + " pays you") + "</span><b>" + money(shownAmt(x.amt)) + "</b></div>";
@@ -917,7 +923,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     var sp = itemSplit(it), ids = sharesOf(it);
     var l = [it.name + (it.qty > 1 ? " ×" + it.qty : "") + " — " + money(it.price) + (it.paidBy != null ? " (paid by " + nm(it.paidBy) + ")" : "")];
     if (!ids.length) l.push("   not assigned yet");
-    ids.forEach(function (p) { l.push("   " + nm(p) + ": " + money(sp[p]) + (ids.length > 1 ? " (" + it.shares[p] + "%)" : "")); });
+    ids.forEach(function (p) { l.push("   " + nm(p) + ": " + money(sp[p]) + (ids.length > 1 ? " (" + pcs(it.shares[p]) + ")" : "")); });
     return l;
   }
   function header(c) {
@@ -956,7 +962,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     items.forEach(function (it) {
       var sp = itemSplit(it); if (!sp[i]) return;
       var ids = sharesOf(it);
-      l.push("  • " + it.name + (it.qty > 1 ? " ×" + it.qty : "") + ": " + money(sp[i]) + (ids.length > 1 ? " (" + it.shares[i] + "% of " + money(it.price) + ")" : ""));
+      l.push("  • " + it.name + (it.qty > 1 ? " ×" + it.qty : "") + ": " + money(sp[i]) + (ids.length > 1 ? " (" + pcs(it.shares[i]) + " of " + money(it.price) + ")" : ""));
     });
     l.push("  Food " + money(c.food[i]) + " + tax " + money(c.taxO[i]) + " + tip " + money(c.tipO[i]) + " = " + money(c.share[i]));
     if (c.paid[i]) l.push("  Already paid -" + money(c.paid[i]));
@@ -1038,7 +1044,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
         var me = who !== "all" && p === who, f = (me ? "700 " : "500 ") + "30px ";
         circ(bx + 12, ry - 10, 12, col(p));
         text(fit(nm(p), f + SANS, bw - 330), bx + 36, ry, f + SANS, me || who === "all" ? INK : MUTED);
-        if (ids.length > 1) text(it.shares[p] + "%", bx + bw - 190, ry, "400 28px " + MONO, MUTED, "right");
+        if (ids.length > 1) text(pcs(it.shares[p]), bx + bw - 190, ry, "400 28px " + MONO, MUTED, "right");
         text(money(sp[p]), bx + bw, ry, f + MONO, me || who === "all" ? INK : MUTED, "right");
         ry += 44;
       });
