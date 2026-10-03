@@ -524,6 +524,9 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
           '<button class="switch" role="switch" id="swTaxEven" aria-checked="' + b.taxEven + '"><span class="txt"><b>Split tax the same for everyone</b><small>Off: bigger orders pay more tax.</small></span><span class="tg"></span></button>' +
           '<button class="switch" role="switch" id="swTipEven" aria-checked="' + b.tipEven + '"><span class="txt"><b>Split tip the same for everyone</b><small>Off: bigger orders pay more tip.</small></span><span class="tg"></span></button>' : "") + "</div>" +
 
+      '<div class="gap"></div><div class="card"><p class="sec" style="margin-bottom:2px">This bill</p>' +
+        '<div class="line"><span>Subtotal</span><b id="sumSub"></b></div><div class="line"><span>Tax</span><b id="sumTax"></b></div><div class="line"><span>Tip</span><b id="sumTip"></b></div>' +
+        '<div class="line total"><span>Total</span><b id="sumTotal"></b></div></div>' +
       '<div class="gap"></div><button class="primary" data-tab="results">Done. See who pays who →</button>' +
       '<div style="text-align:center;margin-top:14px"><button class="dangerlink" id="delBill">Delete this bill</button></div>';
   }
@@ -566,6 +569,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     $("#progLeft").textContent = !c.count ? "" : c.all ? "All done ✓" : money(c.unassigned) + " left";
     $("#progFill").style.width = (c.count ? c.done / c.count * 100 : 0) + "%";
     $("#tipBig").textContent = money(c.tip);
+    $("#sumSub").textContent = money(c.sub); $("#sumTax").textContent = money(c.tax); $("#sumTip").textContent = money(c.tip); $("#sumTotal").textContent = money(c.grand);
     var base = c.sub + (b.tipOnTax ? c.tax : 0);
     $("#tipNote").textContent = base && c.tip ? "That's " + (c.tip / base * 100).toFixed(1) + "% of " + money(base) : "";
     renderTabs(calcAll());
@@ -674,7 +678,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
     A.bills.forEach(function (x) {
       l.push("", billName(x.b).toUpperCase() + " (" + money(x.c.grand) + ")");
       x.b.items.forEach(function (it) { l.push(itemText(it)); });
-      l.push("  Tax " + money(x.c.tax) + ", tip " + money(x.c.tip));
+      l.push("  Subtotal " + money(x.c.sub) + " · Tax " + money(x.c.tax) + " · Tip " + money(x.c.tip) + " · Total " + money(x.c.grand));
     });
     if (A.todo.length) l.push("", "Note: some items don't have names yet, so this isn't final.");
     return l.join("\n");
@@ -748,7 +752,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
       A.bills.forEach(function (x) {
         var b = x.b, c = x.c, h = 140, rows = [];
         b.items.forEach(function (it) { var sp = itemSplit(it), ids = sharers(it); rows.push({ it: it, sp: sp, ids: ids }); h += 58 + ids.length * 42; });
-        h += 70;
+        h += 70 + 4 * 48;
         card(h, function (top) {
           row(top, 64, billName(b), money(c.grand), { bold: true, size: 36 });
           op(function () { text(b.payer != null && person(b.payer) ? "paid by " + nm(b.payer) : "not paid yet", L, top + 104, "400 26px " + SANS, MUTED); });
@@ -758,7 +762,9 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; width: 100%
             r.ids.forEach(function (id) { var yv = yy, pct = r.ids.length > 1 ? pcs(r.it.shares[id]) : ""; op(function () { circ(L + 22, top + yv - 9, 10, col(id)); text(nm(id), L + 42, top + yv, "500 27px " + SANS, MUTED); if (pct) text(pct, R - 190, top + yv, "500 27px " + MONO, MUTED, "right"); text(money(r.sp[id]), R, top + yv, "500 27px " + MONO, MUTED, "right"); }); yy += 42; });
             yy += 12;
           });
-          row(top, yy + 20, "Tax " + money(c.tax) + " · Tip " + money(c.tip), "", { color: MUTED, size: 26 });
+          var ys = yy + 10; op(function () { g.fillStyle = LINE; g.fillRect(L, top + ys, IW - 64, 2); });
+          [["Subtotal", c.sub], ["Tax", c.tax], ["Tip", c.tip]].forEach(function (r, k) { row(top, ys + 48 + k * 48, r[0], money(r[1]), { color: MUTED, size: 28 }); });
+          row(top, ys + 48 + 3 * 48, "Total", money(c.grand), { bold: true, size: 30 });
         });
       });
     } else {
