@@ -15,7 +15,7 @@ jobs:
       run:
         working-directory: CastPilot
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -51,7 +51,7 @@ jobs:
           cp -R build/Build/Products/Release-iphoneos/CastPilot.app Payload/
           zip -qry CastPilot-unsigned.ipa Payload
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: CastPilot-unsigned-ipa
           path: CastPilot/CastPilot-unsigned.ipa

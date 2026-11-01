@@ -83,9 +83,7 @@ final class LocalMediaServer {
     // MARK: - Listener
 
     private func startIfNeeded() async throws -> UInt16 {
-        lock.lock()
-        let existing = listener
-        lock.unlock()
+        let existing = lock.withLock { listener }
         if let existing, existing.state == .ready, let port = existing.port?.rawValue { return port }
         existing?.cancel()
         do {
