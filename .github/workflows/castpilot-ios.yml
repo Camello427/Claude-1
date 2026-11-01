@@ -1,0 +1,58 @@
+name: CastPilot iOS build
+
+on:
+  push:
+    paths:
+      - "CastPilot/**"
+      - ".github/workflows/castpilot-ios.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: CastPilot
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build for iPhone (unsigned)
+        run: |
+          xcodebuild -version
+          if ! xcodebuild \
+              -project CastPilot.xcodeproj \
+              -scheme CastPilot \
+              -configuration Release \
+              -sdk iphoneos \
+              -destination 'generic/platform=iOS' \
+              -derivedDataPath build \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+              build > build.log 2>&1; then
+            echo "::group::Errors"
+            grep -E "error:" build.log | sort -u | head -100
+            echo "::endgroup::"
+            tail -60 build.log
+            exit 1
+          fi
+          echo "::group::Warnings from CastPilot sources"
+          grep -E "/Sources/.*warning:" build.log | sort -u | head -100 || true
+          echo "::endgroup::"
+
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/CastPilot.app Payload/
+          zip -qry CastPilot-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CastPilot-unsigned-ipa
+          path: CastPilot/CastPilot-unsigned.ipa
+          retention-days: 30
