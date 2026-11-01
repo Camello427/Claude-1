@@ -13,8 +13,11 @@ struct CastPilotApp: App {
                     app.devices.startBrowsing()
                     await app.devices.scan()
                 }
-                .onChange(of: scenePhase) { _, phase in
+                .onChange(of: scenePhase, initial: true) { _, phase in
                     app.handleScenePhase(phase)
+                }
+                .onOpenURL { url in
+                    app.handleIncoming(url)
                 }
         }
     }

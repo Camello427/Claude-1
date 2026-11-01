@@ -56,6 +56,8 @@ struct CastDevice: Identifiable, Hashable, Codable {
 struct CastCapabilities {
     var seek: Bool
     var volume: Bool
+    var speed: Bool = false
+    var subtitleToggle: Bool = false
 }
 
 enum PlaybackState: Equatable {
@@ -81,6 +83,9 @@ struct PlaybackStatus: Equatable {
     var duration: Double = 0
     var volume: Double?
     var message: String?
+    var rate: Double = 1
+    /// The TV reported the video played to the end on its own.
+    var finished = false
 }
 
 enum CastError: LocalizedError {
@@ -121,4 +126,11 @@ protocol CastSessionController: AnyObject {
     func stop() async throws
     func status() async throws -> PlaybackStatus
     func disconnect()
+    func setRate(_ rate: Double) async throws
+    func setSubtitlesEnabled(_ enabled: Bool) async throws
+}
+
+extension CastSessionController {
+    func setRate(_ rate: Double) async throws { throw CastError.unsupported("playback speed") }
+    func setSubtitlesEnabled(_ enabled: Bool) async throws { throw CastError.unsupported("turning subtitles on and off") }
 }

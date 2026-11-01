@@ -2,7 +2,7 @@ import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
 
-/// Cast videos stored on the iPhone (from Photos or the Files app).
+/// Cast videos stored on the iPhone (from Photos, the Files app or downloads).
 struct LocalFilesView: View {
     @Environment(AppState.self) private var app
     @Environment(\.dismiss) private var dismiss
@@ -10,7 +10,6 @@ struct LocalFilesView: View {
     @State private var showImporter = false
     @State private var importing = false
     @State private var errorText: String?
-    @State private var chosen: MediaItem?
 
     var body: some View {
         NavigationStack {
@@ -36,13 +35,33 @@ struct LocalFilesView: View {
                     Text(errorText).foregroundStyle(.red)
                 }
 
+                if !app.downloads.downloads.isEmpty {
+                    Section {
+                        ForEach(app.downloads.downloads) { download in
+                            DownloadRow(download: download)
+                                .swipeActions {
+                                    Button(role: .destructive) { app.downloads.remove(download) } label: {
+                                        Label(download.state == .running ? "Cancel" : "Remove", systemImage: "xmark")
+                                    }
+                                }
+                        }
+                    } header: {
+                        HStack {
+                            Text("Downloads")
+                            Spacer()
+                            if app.downloads.downloads.contains(where: { $0.state != .running }) {
+                                Button("Clear") { app.downloads.clearFinished() }.font(.caption)
+                            }
+                        }
+                    }
+                }
+
                 Section("On this iPhone") {
                     if app.localMedia.items.isEmpty {
                         Text("No videos added yet.").foregroundStyle(.secondary)
                     }
                     ForEach(app.localMedia.items) { item in
-                        Button { chosen = item } label: { MediaRow(item: item) }
-                            .buttonStyle(.plain)
+                        NavigationLink(value: item) { MediaRow(item: item) }
                     }
                     .onDelete { offsets in
                         offsets.map { app.localMedia.items[$0] }.forEach(app.localMedia.delete)
@@ -51,6 +70,9 @@ struct LocalFilesView: View {
             }
             .navigationTitle("Videos on this iPhone")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(for: MediaItem.self) { item in
+                MediaDetailView(item: item)
+            }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
@@ -88,12 +110,43 @@ struct LocalFilesView: View {
                     }
                 }
             }
-            .confirmationDialog(chosen?.title ?? "Video",
-                                isPresented: Binding(get: { chosen != nil }, set: { if !$0 { chosen = nil } }),
-                                titleVisibility: .visible,
-                                presenting: chosen) { item in
-                MediaActions(item: item)
+        }
+    }
+}
+
+private struct DownloadRow: View {
+    let download: DownloadManager.Download
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(download.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+            switch download.state {
+            case .running:
+                if download.expected > 0 {
+                    ProgressView(value: download.progress)
+                } else {
+                    ProgressView()
+                }
+                Text(sizeText).font(.caption).foregroundStyle(.secondary)
+            case .finished:
+                Label("Downloaded · \(ByteCountFormatter.string(fromByteCount: download.received, countStyle: .file))",
+                      systemImage: "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            case .failed(let message):
+                Label(message, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            case .cancelled:
+                Text("Cancelled").font(.caption).foregroundStyle(.secondary)
             }
         }
+        .padding(.vertical, 2)
+    }
+
+    private var sizeText: String {
+        let got = ByteCountFormatter.string(fromByteCount: download.received, countStyle: .file)
+        guard download.expected > 0 else { return got }
+        return "\(got) of \(ByteCountFormatter.string(fromByteCount: download.expected, countStyle: .file))"
     }
 }

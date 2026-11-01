@@ -1,11 +1,14 @@
 import Foundation
 import Observation
+import UIKit
 import WebKit
 
-/// The in-app web browser and the videos it has found on the current page.
+/// One browser tab and the videos it has found on its current page.
 @MainActor
 @Observable
-final class BrowserModel {
+final class BrowserModel: Identifiable {
+    let id = UUID()
+    let isPrivate: Bool
     let webView: WKWebView
 
     var addressText = ""
@@ -17,27 +20,36 @@ final class BrowserModel {
     private(set) var canGoBack = false
     private(set) var canGoForward = false
     private(set) var detectedMedia: [MediaItem] = []
+    private(set) var detectedSubtitles: [SubtitleTrack] = []
+    /// Changes on every page load; used so auto-cast fires at most once per page.
+    private(set) var pageToken = UUID()
+    var snapshot: UIImage?
 
     let settings: AppSettings
     private let library: Library
+    @ObservationIgnored var onMediaDetected: ((MediaItem) -> Void)?
     @ObservationIgnored private var coordinator: WebCoordinator?
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
     @ObservationIgnored private var cachedUserAgent: String?
 
-    init(settings: AppSettings, library: Library) {
+    init(settings: AppSettings, library: Library, isPrivate: Bool = false, loadHomePage: Bool = true) {
         self.settings = settings
         self.library = library
+        self.isPrivate = isPrivate
 
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.allowsAirPlayForMediaPlayback = true
         config.allowsPictureInPictureMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = .all
+        if isPrivate { config.websiteDataStore = .nonPersistent() }
         config.userContentController.addUserScript(
             WKUserScript(source: MediaSniffer.script, injectionTime: .atDocumentStart, forMainFrameOnly: false))
         webView = WKWebView(frame: .zero, configuration: config)
         webView.allowsBackForwardNavigationGestures = true
+        webView.isFindInteractionEnabled = true
         webView.scrollView.contentInsetAdjustmentBehavior = .automatic
+        webView.customUserAgent = settings.browserIdentity.userAgent
 
         let coordinator = WebCoordinator()
         coordinator.owner = self
@@ -56,10 +68,23 @@ final class BrowserModel {
         ]
 
         applyAdBlock()
-        if let home = URL(string: settings.homePage), home.scheme != nil {
+        if loadHomePage, let home = URL(string: settings.homePage), home.scheme != nil {
             load(home)
         }
     }
+
+    var displayTitle: String {
+        if !pageTitle.isEmpty { return pageTitle }
+        return currentURL?.host ?? (isPrivate ? "Private tab" : "New tab")
+    }
+
+    /// Detected videos minus short clips (likely ads) when that setting is on.
+    var visibleMedia: [MediaItem] {
+        guard settings.hideShortClips else { return detectedMedia }
+        return detectedMedia.filter { ($0.duration ?? .infinity) >= settings.shortClipSeconds }
+    }
+
+    var hiddenClipCount: Int { detectedMedia.count - visibleMedia.count }
 
     // MARK: Navigation
 
@@ -95,16 +120,27 @@ final class BrowserModel {
             webView.stopLoading()
             webView.loadHTMLString("", baseURL: nil)
             detectedMedia = []
+            detectedSubtitles = []
             currentURL = nil
             addressText = ""
             pageTitle = ""
         }
     }
 
+    func showFindOnPage() {
+        webView.findInteraction?.presentFindNavigator(showingReplace: false)
+    }
+
     func applyAdBlock() {
         let controller = webView.configuration.userContentController
         let enabled = settings.adBlockEnabled
         Task { await AdBlocker.apply(to: controller, enabled: enabled) }
+    }
+
+    func applyIdentity() {
+        webView.customUserAgent = settings.browserIdentity.userAgent
+        cachedUserAgent = nil
+        if webView.url != nil { webView.reload() }
     }
 
     func reloadForDesktopModeChange() {
@@ -115,7 +151,24 @@ final class BrowserModel {
         detectedMedia = []
     }
 
-    // MARK: Info used by the relay and phone player
+    func captureSnapshot() {
+        guard webView.url != nil, webView.bounds.width > 0 else { return }
+        let config = WKSnapshotConfiguration()
+        config.afterScreenUpdates = false
+        webView.takeSnapshot(with: config) { [weak self] image, _ in
+            Task { @MainActor in
+                if let image { self?.snapshot = image }
+            }
+        }
+    }
+
+    func tearDown() {
+        webView.stopLoading()
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: MediaSniffer.handlerName)
+        observations.removeAll()
+    }
+
+    // MARK: Info used by the relay, downloads and the phone player
 
     func userAgent() async -> String {
         if let cachedUserAgent { return cachedUserAgent }
@@ -127,6 +180,21 @@ final class BrowserModel {
 
     func cookies() async -> [HTTPCookie] {
         await webView.configuration.websiteDataStore.httpCookieStore.allCookies()
+    }
+
+    /// Fetches a URL the way this tab would (same User-Agent, cookies and Referer).
+    func fetch(_ url: URL, referer: URL?) async throws -> (Data, URL) {
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
+        request.httpShouldHandleCookies = false
+        request.setValue(await userAgent(), forHTTPHeaderField: "User-Agent")
+        if let referer { request.setValue(referer.absoluteString, forHTTPHeaderField: "Referer") }
+        let matching = await cookies().filter { $0.applies(to: url) }
+        for (k, v) in HTTPCookie.requestHeaderFields(with: matching) { request.setValue(v, forHTTPHeaderField: k) }
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw CastError.http(http.statusCode)
+        }
+        return (data, response.url ?? url)
     }
 
     func clearWebsiteData() async {
@@ -149,16 +217,34 @@ final class BrowserModel {
 
     fileprivate func didStartMainFrameNavigation() {
         detectedMedia = []
+        detectedSubtitles = []
+        pageToken = UUID()
     }
 
     fileprivate func didFinishNavigation() {
         syncState()
-        if let url = currentURL { library.recordVisit(title: pageTitle, url: url) }
+        if let url = currentURL, !isPrivate { library.recordVisit(title: pageTitle, url: url) }
+    }
+
+    fileprivate func subtitleFound(_ body: [String: Any]) {
+        guard let string = body["url"] as? String, let url = URL(string: string),
+              !detectedSubtitles.contains(where: { $0.url == url }) else { return }
+        let lang = (body["lang"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+        var label = (body["label"] as? String) ?? ""
+        if label.isEmpty { label = lang.map { Locale.current.localizedString(forLanguageCode: $0) ?? $0 } ?? url.deletingPathExtension().lastPathComponent }
+        detectedSubtitles.append(SubtitleTrack(url: url, label: label, language: lang))
     }
 
     fileprivate func mediaFound(_ body: [String: Any], frameURL: URL?) {
         guard let string = body["url"] as? String, let url = URL(string: string) else { return }
-        guard !detectedMedia.contains(where: { $0.url == url }) else { return }
+        let duration = (body["duration"] as? NSNumber)?.doubleValue
+
+        if let i = detectedMedia.firstIndex(where: { $0.url == url }) {
+            if let duration, duration > 0 { detectedMedia[i].duration = duration }
+            return
+        }
+        if (body["how"] as? String) == "update" { return }
+
         let mime = body["mime"] as? String
         let kind = MediaKind.detect(url: url, mime: mime)
         let pageTitle = (body["title"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? self.pageTitle
@@ -168,6 +254,7 @@ final class BrowserModel {
         var item = MediaItem(url: url, title: title, kind: kind, source: .web(page: page, frame: frameURL))
         item.poster = (body["poster"] as? String).flatMap { URL(string: $0) }
         item.foundBy = body["how"] as? String ?? ""
+        if let duration, duration > 0 { item.duration = duration }
 
         // Streams and playing videos are the most useful, so they go first.
         if kind.isStream || item.foundBy == "element" {
@@ -176,19 +263,24 @@ final class BrowserModel {
             detectedMedia.append(item)
         }
         if detectedMedia.count > 60 { detectedMedia.removeLast(detectedMedia.count - 60) }
+        onMediaDetected?(item)
     }
 
     fileprivate var blocksPopups: Bool { settings.blockPopups }
-    fileprivate var desktopMode: Bool { settings.desktopMode }
+    fileprivate var desktopMode: Bool { settings.effectiveDesktopMode }
 }
 
-/// Receives WebKit delegate callbacks and forwards them to the model.
+/// Receives WebKit delegate callbacks and forwards them to the tab.
 @MainActor
 final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
     weak var owner: BrowserModel?
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.name == MediaSniffer.handlerName, let body = message.body as? [String: Any] else { return }
+        if (body["kind"] as? String) == "subtitle" {
+            owner?.subtitleFound(body)
+            return
+        }
         let frameURL = message.frameInfo.isMainFrame ? nil : message.frameInfo.request.url
         owner?.mediaFound(body, frameURL: frameURL)
     }
@@ -214,7 +306,7 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScri
 
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
                  for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        // Open "new window" links in the same view. With pop-up blocking on, only links the
+        // Open "new window" links in the same tab. With pop-up blocking on, only links the
         // user actually tapped are followed; script-opened windows are dropped.
         if navigationAction.targetFrame == nil {
             let userTapped = navigationAction.navigationType == .linkActivated

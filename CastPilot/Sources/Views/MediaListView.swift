@@ -5,12 +5,14 @@ import UIKit
 struct MediaListView: View {
     @Environment(AppState.self) private var app
     @Environment(\.dismiss) private var dismiss
-    @State private var chosen: MediaItem?
+    @State private var showHidden = false
 
     var body: some View {
+        let browser = app.browser
+        let items = showHidden ? browser.detectedMedia : browser.visibleMedia
         NavigationStack {
             List {
-                if app.browser.detectedMedia.isEmpty {
+                if items.isEmpty {
                     ContentUnavailableView {
                         Label("No videos found yet", systemImage: "film")
                     } description: {
@@ -18,59 +20,44 @@ struct MediaListView: View {
                     }
                 } else {
                     Section {
-                        ForEach(app.browser.detectedMedia) { item in
-                            Button { chosen = item } label: { MediaRow(item: item) }
-                                .buttonStyle(.plain)
+                        ForEach(items) { item in
+                            NavigationLink(value: item) { MediaRow(item: item) }
                         }
                     } footer: {
-                        Text("Seeing several? The first one, or a “Stream (HLS)” one, is usually the main video. Short clips are often ads.")
+                        Text("Seeing several? The first one, or a “Stream (HLS)” one, is usually the main video.")
+                    }
+                }
+                if browser.hiddenClipCount > 0 {
+                    Section {
+                        Toggle("Show \(browser.hiddenClipCount) short clip\(browser.hiddenClipCount == 1 ? "" : "s")", isOn: $showHidden)
+                    } footer: {
+                        Text("Videos shorter than \(Int(app.settings.shortClipSeconds)) seconds are usually ads, so they're hidden. You can turn this off in Settings.")
+                    }
+                }
+                if !browser.detectedSubtitles.isEmpty {
+                    Section("Subtitles found on this page") {
+                        ForEach(browser.detectedSubtitles) { sub in
+                            Label(sub.label, systemImage: "captions.bubble")
+                        }
                     }
                 }
             }
             .navigationTitle("Videos on this page")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(for: MediaItem.self) { item in
+                MediaDetailView(item: item)
+            }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
-                if !app.browser.detectedMedia.isEmpty {
+                if !browser.detectedMedia.isEmpty {
                     ToolbarItem(placement: .topBarLeading) {
-                        Button("Clear") { app.browser.clearMedia() }
+                        Button("Clear") { browser.clearMedia() }
                     }
                 }
             }
-            .confirmationDialog(chosen?.title ?? "Video",
-                                isPresented: Binding(get: { chosen != nil }, set: { if !$0 { chosen = nil } }),
-                                titleVisibility: .visible,
-                                presenting: chosen) { item in
-                MediaActions(item: item)
-            } message: { item in
-                Text(item.url.absoluteString).font(.caption)
-            }
         }
-    }
-}
-
-/// The choices shown after tapping a video. Used for web videos and imported files.
-struct MediaActions: View {
-    @Environment(AppState.self) private var app
-    let item: MediaItem
-
-    var body: some View {
-        if let device = app.devices.selectedDevice {
-            Button("Cast to \(device.name)") { app.cast(item) }
-            Button("Cast to another device…") {
-                app.pendingItem = item
-                app.sheet = .devices
-            }
-        } else {
-            Button("Cast to TV…") { app.cast(item) }
-        }
-        Button("Play on iPhone / AirPlay") { app.playOnPhone(item) }
-        if !item.isLocal {
-            Button("Copy video link") { UIPasteboard.general.url = item.url }
-        }
-        Button("Cancel", role: .cancel) {}
     }
 }
 
@@ -97,6 +84,16 @@ struct MediaRow: View {
             }
             .frame(width: 72, height: 46)
             .clipped()
+            .overlay(alignment: .bottomTrailing) {
+                if let d = item.duration, d > 0 {
+                    Text(d.clockString)
+                        .font(.caption2.monospacedDigit().bold())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 4)
+                        .background(Color.black.opacity(0.7), in: RoundedRectangle(cornerRadius: 4))
+                        .padding(3)
+                }
+            }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.title)
@@ -112,9 +109,6 @@ struct MediaRow: View {
                     .lineLimit(1)
             }
             Spacer(minLength: 0)
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())

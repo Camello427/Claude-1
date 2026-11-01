@@ -25,6 +25,35 @@ enum SearchEngine: String, CaseIterable, Identifiable {
     }
 }
 
+/// How the browser introduces itself to websites. Some sites only offer a good video player
+/// (or any video at all) to certain browsers.
+enum BrowserIdentity: String, CaseIterable, Identifiable {
+    case iPhone, iPad, mac, android, windows
+    var id: String { rawValue }
+
+    var name: String {
+        switch self {
+        case .iPhone: return "iPhone Safari (default)"
+        case .iPad: return "iPad Safari"
+        case .mac: return "Mac Safari"
+        case .android: return "Android Chrome"
+        case .windows: return "Windows Chrome"
+        }
+    }
+
+    var userAgent: String? {
+        switch self {
+        case .iPhone: return nil
+        case .iPad: return "Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
+        case .mac: return "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15"
+        case .android: return "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36"
+        case .windows: return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+        }
+    }
+
+    var isDesktop: Bool { self == .mac || self == .windows }
+}
+
 /// When to pass video through the phone ("relay") instead of letting the TV fetch it directly.
 enum RelayMode: String, CaseIterable, Identifiable {
     case auto, always, never
@@ -57,6 +86,18 @@ final class AppSettings {
     var desktopMode: Bool { didSet { defaults.set(desktopMode, forKey: "desktopMode") } }
     var relayMode: RelayMode { didSet { defaults.set(relayMode.rawValue, forKey: "relayMode") } }
     var keepAliveInBackground: Bool { didSet { defaults.set(keepAliveInBackground, forKey: "keepAliveInBackground") } }
+    var browserIdentity: BrowserIdentity { didSet { defaults.set(browserIdentity.rawValue, forKey: "browserIdentity") } }
+    var hideShortClips: Bool { didSet { defaults.set(hideShortClips, forKey: "hideShortClips") } }
+    var autoCast: Bool { didSet { defaults.set(autoCast, forKey: "autoCast") } }
+    var resumePlayback: Bool { didSet { defaults.set(resumePlayback, forKey: "resumePlayback") } }
+    var autoAdvanceQueue: Bool { didSet { defaults.set(autoAdvanceQueue, forKey: "autoAdvanceQueue") } }
+    var lockScreenControls: Bool { didSet { defaults.set(lockScreenControls, forKey: "lockScreenControls") } }
+    var requireFaceID: Bool { didSet { defaults.set(requireFaceID, forKey: "requireFaceID") } }
+
+    /// Videos shorter than this are treated as ads when "hide short clips" is on.
+    let shortClipSeconds: Double = 30
+
+    var effectiveDesktopMode: Bool { desktopMode || browserIdentity.isDesktop }
 
     private let defaults = UserDefaults.standard
 
@@ -69,5 +110,12 @@ final class AppSettings {
         desktopMode = d.object(forKey: "desktopMode") as? Bool ?? false
         relayMode = RelayMode(rawValue: d.string(forKey: "relayMode") ?? "") ?? .auto
         keepAliveInBackground = d.object(forKey: "keepAliveInBackground") as? Bool ?? true
+        browserIdentity = BrowserIdentity(rawValue: d.string(forKey: "browserIdentity") ?? "") ?? .iPhone
+        hideShortClips = d.object(forKey: "hideShortClips") as? Bool ?? true
+        autoCast = d.object(forKey: "autoCast") as? Bool ?? false
+        resumePlayback = d.object(forKey: "resumePlayback") as? Bool ?? true
+        autoAdvanceQueue = d.object(forKey: "autoAdvanceQueue") as? Bool ?? true
+        lockScreenControls = d.object(forKey: "lockScreenControls") as? Bool ?? true
+        requireFaceID = d.object(forKey: "requireFaceID") as? Bool ?? false
     }
 }

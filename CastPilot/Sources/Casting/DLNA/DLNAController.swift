@@ -151,8 +151,13 @@ final class DLNAController: CastSessionController {
         let flags = media.kind == .hls ? "*" : "DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000"
         var art = ""
         if let poster = media.poster { art = "<upnp:albumArtURI>\(XMLText.escape(poster.absoluteString))</upnp:albumArtURI>" }
+        var subs = ""
+        if let srt = media.subtitleSRT {
+            let u = XMLText.escape(srt.absoluteString)
+            subs = "<res protocolInfo=\"http-get:*:text/srt:*\">\(u)</res><sec:CaptionInfoEx sec:type=\"srt\">\(u)</sec:CaptionInfoEx><sec:CaptionInfo sec:type=\"srt\">\(u)</sec:CaptionInfo>"
+        }
         return """
-        <DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/" xmlns:dlna="urn:schemas-dlna-org:metadata-1-0/"><item id="castpilot-1" parentID="0" restricted="1"><dc:title>\(XMLText.escape(media.title))</dc:title><upnp:class>\(upnpClass)</upnp:class>\(art)<res protocolInfo="http-get:*:\(media.mimeType):\(flags)">\(XMLText.escape(media.url.absoluteString))</res></item></DIDL-Lite>
+        <DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/" xmlns:dlna="urn:schemas-dlna-org:metadata-1-0/" xmlns:sec="http://www.sec.co.kr/"><item id="castpilot-1" parentID="0" restricted="1"><dc:title>\(XMLText.escape(media.title))</dc:title><upnp:class>\(upnpClass)</upnp:class>\(art)<res protocolInfo="http-get:*:\(media.mimeType):\(flags)">\(XMLText.escape(media.url.absoluteString))</res>\(subs)</item></DIDL-Lite>
         """
     }
 

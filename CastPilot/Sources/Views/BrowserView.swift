@@ -1,10 +1,30 @@
 import SwiftUI
 import WebKit
 
+/// Hosts the current tab's web view, swapping it when the tab changes.
 struct WebViewContainer: UIViewRepresentable {
     let webView: WKWebView
-    func makeUIView(context: Context) -> WKWebView { webView }
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
+
+    func makeUIView(context: Context) -> UIView {
+        let container = UIView()
+        container.backgroundColor = .systemBackground
+        host(webView, in: container)
+        return container
+    }
+
+    func updateUIView(_ container: UIView, context: Context) {
+        if webView.superview !== container {
+            container.subviews.forEach { $0.removeFromSuperview() }
+            host(webView, in: container)
+        }
+    }
+
+    private func host(_ webView: WKWebView, in container: UIView) {
+        webView.removeFromSuperview()
+        webView.frame = container.bounds
+        webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        container.addSubview(webView)
+    }
 }
 
 /// The main screen: address bar, web page, "videos found" button, now-casting bar and toolbar.
@@ -23,8 +43,8 @@ struct BrowserView: View {
                         .transition(.opacity)
                 }
                 VStack(spacing: 10) {
-                    if !app.browser.detectedMedia.isEmpty && !addressFocused {
-                        FoundVideosButton(count: app.browser.detectedMedia.count) { app.sheet = .media }
+                    if !app.browser.visibleMedia.isEmpty && !addressFocused {
+                        FoundVideosButton(count: app.browser.visibleMedia.count) { app.sheet = .media }
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                     if let session = app.session, !addressFocused {
@@ -34,7 +54,7 @@ struct BrowserView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.bottom, 10)
-                .animation(.spring(duration: 0.3), value: app.browser.detectedMedia.count)
+                .animation(.spring(duration: 0.3), value: app.browser.visibleMedia.count)
                 .animation(.spring(duration: 0.3), value: app.session == nil)
             }
             if !addressFocused {
@@ -50,6 +70,8 @@ struct BrowserView: View {
                 case .library: LibraryView()
                 case .settings: SettingsView()
                 case .localFiles: LocalFilesView()
+                case .tabs: TabsView()
+                case .castLink: CastLinkView()
                 }
             }
             .environment(app)
@@ -78,6 +100,12 @@ struct AddressBar: View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 HStack(spacing: 8) {
+                    if browser.isPrivate {
+                        Image(systemName: "eyeglasses")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.purple)
+                            .accessibilityLabel("Private tab")
+                    }
                     Image(systemName: browser.currentURL?.scheme == "https" && !isFocused ? "lock.fill" : "magnifyingglass")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -106,7 +134,8 @@ struct AddressBar: View {
                 }
                 .padding(.horizontal, 12)
                 .frame(height: 40)
-                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(browser.isPrivate ? Color.purple.opacity(0.15) : Color(.secondarySystemBackground),
+                            in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                 if isFocused {
                     Button("Cancel") { focused.wrappedValue = false }
@@ -142,8 +171,8 @@ struct BottomToolbar: View {
                     .font(.title3)
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .overlay(alignment: .topTrailing) {
-                        if !browser.detectedMedia.isEmpty {
-                            Text("\(browser.detectedMedia.count)")
+                        if !browser.visibleMedia.isEmpty {
+                            Text("\(browser.visibleMedia.count)")
                                 .font(.caption2.bold())
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 5)
@@ -153,7 +182,7 @@ struct BottomToolbar: View {
                         }
                     }
             }
-            .accessibilityLabel("Videos found: \(browser.detectedMedia.count)")
+            .accessibilityLabel("Videos found: \(browser.visibleMedia.count)")
 
             Button {
                 app.sheet = app.session != nil ? .remote : .devices
@@ -166,9 +195,25 @@ struct BottomToolbar: View {
             }
             .accessibilityLabel(app.session != nil ? "Remote control" : "Choose a TV")
 
-            toolbarButton("book", "Bookmarks and history", enabled: true) { app.sheet = .library }
+            Button {
+                browser.captureSnapshot()
+                app.sheet = .tabs
+            } label: {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .stroke(lineWidth: 1.8)
+                        .frame(width: 22, height: 22)
+                    Text("\(app.tabs.tabs.count)")
+                        .font(.caption2.bold())
+                }
+                .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .accessibilityLabel("Tabs: \(app.tabs.tabs.count) open")
 
             Menu {
+                Button { app.tabs.newTab() } label: { Label("New tab", systemImage: "plus.square.on.square") }
+                Button { app.tabs.newTab(isPrivate: true) } label: { Label("New private tab", systemImage: "eyeglasses") }
+                Divider()
                 if let url = browser.currentURL {
                     Button {
                         app.library.toggleBookmark(title: browser.pageTitle, url: url)
@@ -177,9 +222,13 @@ struct BottomToolbar: View {
                               systemImage: app.library.isBookmarked(url) ? "bookmark.slash" : "bookmark")
                     }
                     ShareLink(item: url) { Label("Share page", systemImage: "square.and.arrow.up") }
+                    Button { browser.showFindOnPage() } label: { Label("Find on page", systemImage: "doc.text.magnifyingglass") }
                 }
+                Button { app.sheet = .library } label: { Label("Bookmarks, history & recently cast", systemImage: "book") }
+                Button { app.sheet = .castLink } label: { Label("Cast a link", systemImage: "link") }
                 Button { app.sheet = .localFiles } label: {
-                    Label("Videos on this iPhone", systemImage: "iphone")
+                    Label(app.downloads.activeCount > 0 ? "Videos on this iPhone (\(app.downloads.activeCount) downloading)" : "Videos on this iPhone",
+                          systemImage: "iphone")
                 }
                 Button { browser.goHome() } label: { Label("Home", systemImage: "house") }
                 Divider()
@@ -305,9 +354,37 @@ struct StartPageView: View {
                     }
                 }
 
-                Button { app.sheet = .localFiles } label: {
-                    Label("Cast a video from this iPhone", systemImage: "iphone.and.arrow.forward")
-                        .frame(maxWidth: .infinity)
+                if let recent = app.history.entries.first(where: { !$0.isFinished && $0.position > 30 }) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Continue watching").font(.headline)
+                        Button { app.cast(recent.item) } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "play.circle.fill")
+                                    .font(.title)
+                                    .foregroundStyle(Color.accentColor)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(recent.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+                                    ProgressView(value: recent.progress)
+                                    Text("\(recent.position.clockString) of \(recent.duration.clockString)")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                            .padding(12)
+                            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                HStack(spacing: 12) {
+                    Button { app.sheet = .castLink } label: {
+                        Label("Cast a link", systemImage: "link")
+                            .frame(maxWidth: .infinity)
+                    }
+                    Button { app.sheet = .localFiles } label: {
+                        Label("From iPhone", systemImage: "iphone.and.arrow.forward")
+                            .frame(maxWidth: .infinity)
+                    }
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.large)

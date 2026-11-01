@@ -12,6 +12,10 @@ enum MediaSniffer {
       window.__castPilotInstalled = true;
 
       var seen = {};
+      var durationSent = {};
+      var subSeen = {};
+      var subCount = 0;
+      var SUB_EXT = /\.(vtt|srt)$/i;
       var MEDIA_EXT = /\.(m3u8|mpd|mp4|m4v|mov|webm|mkv|mp3|m4a|aac|ogg|oga|wav|flac)(\?|#|&|$)/i;
       var SEGMENT_EXT = /\.(ts|m4s|cmfv|cmfa|aac|key|vtt|srt|webvtt|jpg|jpeg|png|gif|webp|js|css|json)$/i;
       var MEDIA_TYPE = /(mpegurl|dash\+xml|^video\/|^audio\/)/i;
@@ -26,22 +30,46 @@ enum MediaSniffer {
         try { return new URL(u).pathname; } catch (e) { return u; }
       }
 
+      function send(msg) {
+        try { window.webkit.messageHandlers.castPilotMedia.postMessage(msg); } catch (e) {}
+      }
+
       function post(url, how, extra) {
         url = abs(url);
         if (!url || !/^https?:/i.test(url)) return;
-        if (seen[url]) return;
         if (AD_HOST.test(url)) return;
+        var dur = (extra && extra.duration > 0) ? extra.duration : 0;
+        if (seen[url]) {
+          // Send the length once it becomes known, so short ad clips can be hidden.
+          if (dur > 0 && !durationSent[url]) { durationSent[url] = true; send({ url: url, how: 'update', duration: dur }); }
+          return;
+        }
         seen[url] = true;
+        if (dur > 0) durationSent[url] = true;
         var msg = { url: url, how: how, title: document.title || '', page: location.href, mime: '' };
         if (extra) { for (var k in extra) { if (extra[k] != null) msg[k] = extra[k]; } }
-        try { window.webkit.messageHandlers.castPilotMedia.postMessage(msg); } catch (e) {}
+        send(msg);
+      }
+
+      function postSub(url, label, lang, how) {
+        url = abs(url);
+        if (!url || !/^https?:/i.test(url) || subSeen[url] || subCount >= 20) return;
+        subSeen[url] = true;
+        subCount++;
+        send({ kind: 'subtitle', url: url, label: label || '', lang: lang || '', page: location.href, how: how });
       }
 
       function consider(url, type, how) {
         if (!url || typeof url !== 'string') return;
         url = abs(url);
         if (!url) return;
-        if (SEGMENT_EXT.test(pathOf(url))) return;
+        var p = pathOf(url);
+        if (SUB_EXT.test(p)) {
+          // Stand-alone subtitle files (not the numbered pieces of a stream's subtitles).
+          if (!/(seg|segment|chunk|frag|part)[-_]?\d+/i.test(p) && !/[-_\/]\d{3,}\.(vtt|srt)$/i.test(p)) postSub(url, '', '', how);
+          return;
+        }
+        if (SEGMENT_EXT.test(p)) return;
         type = (type || '').toLowerCase();
         if (type && SEGMENT_TYPE.test(type)) return;
         // Ranged requests are usually chunks of a bigger file the page is already playing.
@@ -58,6 +86,13 @@ enum MediaSniffer {
         };
         var src = el.currentSrc || el.src;
         if (src && !/^(blob|data):/i.test(src)) post(src, 'element', extra);
+        var tracks = el.querySelectorAll ? el.querySelectorAll('track') : [];
+        for (var t = 0; t < tracks.length; t++) {
+          var kind = (tracks[t].kind || 'subtitles').toLowerCase();
+          if ((kind === 'subtitles' || kind === 'captions') && tracks[t].src) {
+            postSub(tracks[t].src, tracks[t].label, tracks[t].srclang, 'track');
+          }
+        }
         var sources = el.querySelectorAll ? el.querySelectorAll('source') : [];
         for (var i = 0; i < sources.length; i++) {
           var s = sources[i].src || sources[i].getAttribute('src');
@@ -81,7 +116,7 @@ enum MediaSniffer {
         }
       }
 
-      ['play', 'playing', 'loadedmetadata', 'loadstart'].forEach(function (name) {
+      ['play', 'playing', 'loadedmetadata', 'loadstart', 'durationchange'].forEach(function (name) {
         document.addEventListener(name, function (e) { scanMedia(e.target); }, true);
       });
 

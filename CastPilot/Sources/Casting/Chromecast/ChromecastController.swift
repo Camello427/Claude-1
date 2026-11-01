@@ -6,7 +6,7 @@ import Network
 @MainActor
 final class ChromecastController: CastSessionController {
     let device: CastDevice
-    var capabilities: CastCapabilities { CastCapabilities(seek: true, volume: true) }
+    var capabilities: CastCapabilities { CastCapabilities(seek: true, volume: true, speed: true, subtitleToggle: true) }
 
     private enum NS {
         static let connection = "urn:x-cast:com.google.cast.tp.connection"
@@ -63,18 +63,31 @@ final class ChromecastController: CastSessionController {
         if media.kind == .mov || media.kind == .mkv || media.kind == .unknown { contentType = "video/mp4" }
         if media.kind == .hls { contentType = "application/x-mpegURL" }
 
-        let info: [String: Any] = [
+        var info: [String: Any] = [
             "contentId": media.url.absoluteString,
             "contentUrl": media.url.absoluteString,
             "contentType": contentType,
             "streamType": media.isLive ? "LIVE" : "BUFFERED",
             "metadata": metadata,
         ]
+        var load: [String: Any] = ["type": "LOAD", "autoplay": true, "currentTime": startAt]
+        if let vtt = media.subtitleVTT {
+            info["tracks"] = [[
+                "trackId": 1,
+                "type": "TEXT",
+                "subtype": "SUBTITLES",
+                "trackContentId": vtt.absoluteString,
+                "trackContentType": "text/vtt",
+                "name": media.subtitleLabel ?? "Subtitles",
+                "language": media.subtitleLanguage ?? "en",
+            ] as [String: Any]]
+            info["textTrackStyle"] = ["backgroundColor": "#00000099", "foregroundColor": "#FFFFFFFF", "fontScale": 1.0] as [String: Any]
+            load["activeTrackIds"] = [1]
+        }
+        load["media"] = info
         knownDuration = 0
         current = PlaybackStatus(state: .loading)
-        let reply = try await request(NS.media, to: transport,
-                                      ["type": "LOAD", "media": info, "autoplay": true, "currentTime": startAt],
-                                      timeout: 30)
+        let reply = try await request(NS.media, to: transport, load, timeout: 30)
         updateMedia(reply)
     }
 
@@ -83,6 +96,15 @@ final class ChromecastController: CastSessionController {
 
     func seek(to seconds: Double) async throws {
         try await mediaCommand("SEEK", ["currentTime": max(0, seconds)])
+    }
+
+    func setRate(_ rate: Double) async throws {
+        try await mediaCommand("SET_PLAYBACK_RATE", ["playbackRate": rate])
+        current.rate = rate
+    }
+
+    func setSubtitlesEnabled(_ enabled: Bool) async throws {
+        try await mediaCommand("EDIT_TRACKS_INFO", ["activeTrackIds": enabled ? [1] : [Int]()])
     }
 
     func setVolume(_ level: Double) async throws {
@@ -249,16 +271,18 @@ final class ChromecastController: CastSessionController {
         }
         if let id = (s["mediaSessionId"] as? NSNumber)?.intValue { mediaSessionId = id }
         if let t = (s["currentTime"] as? NSNumber)?.doubleValue { current.position = t }
+        if let r = (s["playbackRate"] as? NSNumber)?.doubleValue, r > 0 { current.rate = r }
         if let media = s["media"] as? [String: Any], let d = (media["duration"] as? NSNumber)?.doubleValue, d > 0 {
             knownDuration = d
         }
         current.duration = knownDuration
         switch s["playerState"] as? String ?? "" {
-        case "PLAYING": current.state = .playing; current.message = nil
+        case "PLAYING": current.state = .playing; current.message = nil; current.finished = false
         case "PAUSED": current.state = .paused
         case "BUFFERING", "LOADING": current.state = .buffering
         case "IDLE":
             current.state = .idle
+            if (s["idleReason"] as? String) == "FINISHED" { current.finished = true }
             if (s["idleReason"] as? String) == "ERROR" {
                 current.message = "The TV couldn't play this video. Try turning on the iPhone relay in Settings, or pick another video."
             }

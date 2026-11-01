@@ -38,6 +38,7 @@ struct PhonePlayerView: UIViewControllerRepresentable {
         if !playback.cookies.isEmpty { options[AVURLAssetHTTPCookiesKey] = playback.cookies }
         let asset = AVURLAsset(url: playback.url, options: options)
         let item = AVPlayerItem(asset: asset)
+        if playback.peakBitRate > 0 { item.preferredPeakBitRate = playback.peakBitRate }
         let title = AVMutableMetadataItem()
         title.identifier = .commonIdentifierTitle
         title.value = playback.title as NSString

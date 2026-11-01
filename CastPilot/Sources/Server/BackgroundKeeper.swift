@@ -1,20 +1,26 @@
 import AVFoundation
 
 /// Keeps the app running while the screen is locked or another app is open, so the relay can
-/// keep feeding the TV. It plays silence through an audio session that mixes with other audio.
+/// keep feeding the TV. It plays silence through the audio session.
+///
+/// With `mixWithOthers: false` the app also becomes the "now playing" app, which is what makes
+/// the TV controls appear on the lock screen and in Control Center.
 final class BackgroundKeeper {
     static let shared = BackgroundKeeper()
 
     private var engine: AVAudioEngine?
     private var player: AVAudioPlayerNode?
+    private var mixing = true
 
     var isRunning: Bool { engine != nil }
 
-    func start() {
-        guard engine == nil else { return }
+    func start(mixWithOthers: Bool = true) {
+        if engine != nil, mixing == mixWithOthers { return }
+        if engine != nil { stop() }
+        mixing = mixWithOthers
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try session.setCategory(.playback, mode: .default, options: mixWithOthers ? [.mixWithOthers] : [])
             try session.setActive(true)
 
             let engine = AVAudioEngine()

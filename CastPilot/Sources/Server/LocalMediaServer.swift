@@ -7,6 +7,8 @@ struct HeaderProfile {
     var referer: String?
     var userAgent: String?
     var cookies: [HTTPCookie]
+    /// When set, HLS master playlists are trimmed to just this quality.
+    var keepVariant: URL? = nil
 }
 
 struct HTTPRequestHead {
@@ -45,6 +47,9 @@ final class LocalMediaServer {
     private var listener: NWListener?
     private var profiles: [String: HeaderProfile] = [:]
     private var files: [String: URL] = [:]
+    private var subtitles: [String: String] = [:]
+    /// SRT subtitles for the current cast, advertised to Samsung TVs in a response header.
+    private var captionURL: String?
 
     static let preferredPort: UInt16 = 8975
 
@@ -70,6 +75,21 @@ final class LocalMediaServer {
         let id = String(UUID().uuidString.prefix(8)).lowercased()
         files[id] = url
         return id
+    }
+
+    /// Stores WebVTT subtitles and returns an id for `/s/<id>/subtitles.vtt` (or `.srt`).
+    func registerSubtitle(vtt: String) -> String {
+        let id = String(UUID().uuidString.prefix(8)).lowercased()
+        lock.withLock { subtitles[id] = vtt }
+        return id
+    }
+
+    func subtitleURLs(base: URL, id: String) -> (vtt: URL, srt: URL) {
+        (URL(string: "\(base.absoluteString)/s/\(id)/subtitles.vtt")!, URL(string: "\(base.absoluteString)/s/\(id)/subtitles.srt")!)
+    }
+
+    func setCaptionURL(_ url: URL?) {
+        lock.withLock { captionURL = url?.absoluteString }
     }
 
     func relayURL(base: URL, upstream: URL, profileID: String, fileName: String? = nil) -> URL {
@@ -155,7 +175,16 @@ final class LocalMediaServer {
         lock.lock()
         let profile = parts.count >= 3 && parts[0] == "r" ? profiles[parts[1]] : nil
         let file = parts.count >= 2 && parts[0] == "f" ? files[parts[1]] : nil
+        let subtitle = parts.count >= 3 && parts[0] == "s" ? subtitles[parts[1]] : nil
         lock.unlock()
+
+        if let subtitle {
+            let wantsSRT = parts[2].lowercased().hasSuffix(".srt")
+            let body = Data((wantsSRT ? SubtitleConverter.toSRT(subtitle) : subtitle).utf8)
+            let type = wantsSRT ? "application/x-subrip; charset=utf-8" : "text/vtt; charset=utf-8"
+            Self.respond(conn, status: 200, headers: [("Content-Type", type)], body: req.method == "HEAD" ? nil : body)
+            return
+        }
 
         if let profile, let decoded = NetworkUtils.base64URLDecode(parts[2]), let upstream = URL(string: decoded) {
             relay(req, upstream: upstream, profileID: parts[1], profile: profile, conn: conn)
@@ -192,8 +221,10 @@ final class LocalMediaServer {
             serverBase = "http://\(NetworkUtils.wifiIPv4() ?? "127.0.0.1"):\(listener?.port?.rawValue ?? Self.preferredPort)"
         }
 
-        let streamer = ProxyStreamer(connection: conn, isHead: req.method == "HEAD", forcePlaylist: looksLikePlaylist) { text, finalURL in
-            Self.rewritePlaylist(text, base: finalURL, serverBase: serverBase, profileID: profileID)
+        let keep = profile.keepVariant
+        let streamer = ProxyStreamer(connection: conn, isHead: req.method == "HEAD", forcePlaylist: looksLikePlaylist,
+                                     extraHeaders: captionHeaders()) { text, finalURL in
+            Self.rewritePlaylist(text, base: finalURL, serverBase: serverBase, profileID: profileID, keepVariant: keep)
         }
         streamer.start(r)
     }
@@ -205,23 +236,48 @@ final class LocalMediaServer {
         return URL(string: "\(base)/r/\(profileID)/\(encoded)/\(NetworkUtils.strictEncode(name))")!
     }
 
-    /// Points every URL in an HLS playlist back at the relay.
-    static func rewritePlaylist(_ text: String, base: URL, serverBase: String, profileID: String) -> String {
+    private func captionHeaders() -> [(String, String)] {
+        guard let url = lock.withLock({ captionURL }) else { return [] }
+        return [("CaptionInfo.sec", url)]
+    }
+
+    /// Points every URL in an HLS playlist back at the relay. With `keepVariant`, a master
+    /// playlist is trimmed to that single quality (audio and subtitle groups are kept).
+    static func rewritePlaylist(_ text: String, base: URL, serverBase: String, profileID: String, keepVariant: URL? = nil) -> String {
         guard text.contains("#EXT") else { return text }
+        let lines = text.replacingOccurrences(of: "\r\n", with: "\n").split(separator: "\n", omittingEmptySubsequences: false)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+
+        // Only filter if the chosen quality is actually in this playlist.
+        var keep: URL? = nil
+        if let keepVariant {
+            let variants = HLSParser.variants(in: text, base: base)
+            if variants.contains(where: { HLSParser.matches($0.url, keepVariant) }) { keep = keepVariant }
+        }
+
         var out: [String] = []
-        var nextIsPlaylist = false
-        for raw in text.replacingOccurrences(of: "\r\n", with: "\n").split(separator: "\n", omittingEmptySubsequences: false) {
-            let line = raw.trimmingCharacters(in: .whitespaces)
+        var pendingStreamInf: String?
+        for line in lines {
             if line.isEmpty {
-                out.append("")
+                if pendingStreamInf == nil { out.append("") }
             } else if line.hasPrefix("#") {
-                if line.hasPrefix("#EXT-X-STREAM-INF") { nextIsPlaylist = true }
-                out.append(rewriteURIAttributes(line, base: base, serverBase: serverBase, profileID: profileID))
+                let rewritten = rewriteURIAttributes(line, base: base, serverBase: serverBase, profileID: profileID)
+                if line.hasPrefix("#EXT-X-STREAM-INF") {
+                    pendingStreamInf = rewritten
+                } else if keep != nil && line.hasPrefix("#EXT-X-I-FRAME-STREAM-INF") {
+                    continue
+                } else {
+                    out.append(rewritten)
+                }
             } else if let abs = URL(string: line, relativeTo: base)?.absoluteURL {
                 var name: String? = nil
-                if nextIsPlaylist && abs.pathExtension.isEmpty { name = "index.m3u8" }
+                if let tag = pendingStreamInf {
+                    pendingStreamInf = nil
+                    if let keep, !HLSParser.matches(abs, keep) { continue }
+                    out.append(tag)
+                    if abs.pathExtension.isEmpty { name = "index.m3u8" }
+                }
                 out.append(relayURL(base: serverBase, upstream: abs, profileID: profileID, fileName: name).absoluteString)
-                nextIsPlaylist = false
             } else {
                 out.append(line)
             }
@@ -274,6 +330,7 @@ final class LocalMediaServer {
             ("Content-Length", String(end - start + 1)),
             ("Accept-Ranges", "bytes"),
         ]
+        headers += captionHeaders()
         if status == 206 { headers.append(("Content-Range", "bytes \(start)-\(end)/\(size)")) }
         conn.send(content: Self.head(status: status, headers: headers), completion: .contentProcessed { _ in })
         if req.method == "HEAD" {

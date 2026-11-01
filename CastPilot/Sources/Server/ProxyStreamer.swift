@@ -8,6 +8,7 @@ final class ProxyStreamer: NSObject, URLSessionDataDelegate {
     private let isHead: Bool
     private let forcePlaylist: Bool
     private let rewrite: (String, URL) -> String
+    private let extraHeaders: [(String, String)]
 
     private let lock = NSLock()
     private var session: URLSession?
@@ -24,7 +25,9 @@ final class ProxyStreamer: NSObject, URLSessionDataDelegate {
     private static let lowWater = 2 * 1024 * 1024
     private static let maxPlaylist = 16 * 1024 * 1024
 
-    init(connection: NWConnection, isHead: Bool, forcePlaylist: Bool, rewrite: @escaping (String, URL) -> String) {
+    init(connection: NWConnection, isHead: Bool, forcePlaylist: Bool, extraHeaders: [(String, String)] = [],
+         rewrite: @escaping (String, URL) -> String) {
+        self.extraHeaders = extraHeaders
         self.conn = connection
         self.isHead = isHead
         self.forcePlaylist = forcePlaylist
@@ -82,6 +85,7 @@ final class ProxyStreamer: NSObject, URLSessionDataDelegate {
         if http.value(forHTTPHeaderField: "Accept-Ranges") == nil, http.statusCode == 206 {
             headers.append(("Accept-Ranges", "bytes"))
         }
+        headers += extraHeaders
         conn.send(content: LocalMediaServer.head(status: http.statusCode, headers: headers), completion: .contentProcessed { _ in })
         headerSent = true
         completionHandler(isHead ? .cancel : .allow)

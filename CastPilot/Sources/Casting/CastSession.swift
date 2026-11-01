@@ -13,19 +13,32 @@ final class CastSession {
     var lastError: String?
     var isScrubbing = false
     var isBusy = false
+    var subtitlesOn: Bool
+    /// Set when playback picked up from a saved position, so the remote can offer "Start over".
+    var resumedFrom: Double?
+
+    /// Called after every status update (lock screen, history, sleep timer).
+    @ObservationIgnored var onStatus: ((CastSession) -> Void)?
+    /// Called once when the video plays to the end by itself.
+    @ObservationIgnored var onFinished: ((CastSession) -> Void)?
 
     @ObservationIgnored private var pollTask: Task<Void, Never>?
     @ObservationIgnored private var failures = 0
+    @ObservationIgnored private var userStopped = false
+    @ObservationIgnored private var finishReported = false
+    @ObservationIgnored private var lastActivePosition: Double = 0
 
     init(controller: any CastSessionController, item: MediaItem, media: CastMedia) {
         self.device = controller.device
         self.controller = controller
         self.item = item
         self.media = media
+        self.subtitlesOn = media.subtitleVTT != nil
     }
 
     var capabilities: CastCapabilities { controller.capabilities }
     var isConnected: Bool { status.state != .disconnected }
+    var isActive: Bool { status.state == .playing || status.state == .buffering || status.state == .loading }
 
     func startPolling() {
         pollTask?.cancel()
@@ -47,12 +60,16 @@ final class CastSession {
         do {
             let s = try await controller.status()
             failures = 0
+            let previous = status
             if !isScrubbing {
                 var merged = s
                 if merged.volume == nil { merged.volume = status.volume }
                 status = merged
             }
             if let message = s.message { lastError = message }
+            if s.state == .playing || s.state == .paused { lastActivePosition = s.position }
+            detectFinish(previous: previous, now: s)
+            onStatus?(self)
         } catch {
             failures += 1
             if failures >= 5 {
@@ -62,15 +79,30 @@ final class CastSession {
         }
     }
 
-    func togglePlayPause() {
-        perform { [controller, status] in
-            if status.state == .playing || status.state == .buffering {
-                try await controller.pause()
-            } else {
-                try await controller.play()
-            }
+    private func detectFinish(previous: PlaybackStatus, now: PlaybackStatus) {
+        guard !finishReported, !userStopped else { return }
+        let wasActive = previous.state == .playing || previous.state == .buffering || previous.state == .paused
+        let ended = now.state == .idle || now.state == .stopped
+        let duration = max(now.duration, previous.duration)
+        let nearEnd = duration > 0 && lastActivePosition >= duration - 15
+        if now.finished || (wasActive && ended && nearEnd) {
+            finishReported = true
+            onFinished?(self)
         }
-        status.state = (status.state == .playing) ? .paused : .playing
+    }
+
+    func play() {
+        status.state = .playing
+        perform { [controller] in try await controller.play() }
+    }
+
+    func pause() {
+        status.state = .paused
+        perform { [controller] in try await controller.pause() }
+    }
+
+    func togglePlayPause() {
+        if status.state == .playing || status.state == .buffering { pause() } else { play() }
     }
 
     func seek(to seconds: Double) {
@@ -89,7 +121,18 @@ final class CastSession {
         perform { [controller] in try await controller.setVolume(level) }
     }
 
+    func setRate(_ rate: Double) {
+        status.rate = rate
+        perform { [controller] in try await controller.setRate(rate) }
+    }
+
+    func setSubtitles(_ on: Bool) {
+        subtitlesOn = on
+        perform { [controller] in try await controller.setSubtitlesEnabled(on) }
+    }
+
     func stop() {
+        userStopped = true
         perform { [controller] in try await controller.stop() }
         status.state = .stopped
     }

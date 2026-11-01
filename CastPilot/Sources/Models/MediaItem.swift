@@ -89,6 +89,14 @@ struct MediaItem: Identifiable, Hashable {
     var poster: URL?
     var foundBy: String = ""
     var detectedAt = Date()
+    /// Length in seconds, when the page reported it.
+    var duration: Double?
+    /// A specific quality picked from an HLS master playlist (nil = automatic).
+    var variant: HLSVariant?
+    /// Subtitles to show with the video.
+    var subtitle: SubtitleTrack?
+
+    var isDownloadable: Bool { !isLocal && !kind.isStream }
 
     var isLocal: Bool {
         if case .local = source { return true }
@@ -116,6 +124,11 @@ struct CastMedia {
     var poster: URL?
     var isLive: Bool = false
     var viaRelay: Bool = false
+    /// WebVTT and SRT copies of the chosen subtitles, served by the iPhone relay.
+    var subtitleVTT: URL?
+    var subtitleSRT: URL?
+    var subtitleLabel: String?
+    var subtitleLanguage: String?
 }
 
 /// Something to play on the phone itself (and from there, over AirPlay).
@@ -125,4 +138,37 @@ struct PhonePlayback: Identifiable {
     var title: String
     var headers: [String: String] = [:]
     var cookies: [HTTPCookie] = []
+    /// Caps quality when the user picked a specific HLS variant.
+    var peakBitRate: Double = 0
+}
+
+/// One subtitle file, found on a page or imported from Files.
+struct SubtitleTrack: Hashable, Codable, Identifiable {
+    var id: String { url.absoluteString }
+    var url: URL
+    var label: String
+    var language: String?
+
+    var isLocal: Bool { url.isFileURL }
+}
+
+/// One quality level in an HLS master playlist.
+struct HLSVariant: Hashable, Identifiable {
+    var id: String { url.absoluteString }
+    var url: URL
+    var bandwidth: Int
+    var width: Int?
+    var height: Int?
+
+    var label: String {
+        let rate = bandwidth > 0 ? String(format: "%.1f Mbps", Double(bandwidth) / 1_000_000) : ""
+        guard let height else { return rate.isEmpty ? "Unknown quality" : rate }
+        let name: String
+        switch height {
+        case 2000...: name = "4K"
+        case 1400...: name = "1440p"
+        default: name = "\(height)p"
+        }
+        return rate.isEmpty ? name : "\(name) · \(rate)"
+    }
 }

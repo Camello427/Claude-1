@@ -80,6 +80,25 @@ final class RokuController: CastSessionController {
         _ = try await request("keypress/\(name)", method: "POST")
     }
 
+    /// Presses a button on the Roku remote, e.g. "Home", "Select", "Up", "VolumeUp".
+    nonisolated static func press(_ key: String, on device: CastDevice) async throws {
+        guard let url = URL(string: "http://\(device.host):\(device.port)/keypress/\(key)") else { return }
+        var req = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 4)
+        req.httpMethod = "POST"
+        req.httpBody = Data()
+        let (_, response) = try await URLSession.shared.data(for: req)
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw CastError.http(http.statusCode)
+        }
+    }
+
+    /// Types text into the Roku's on-screen keyboard (search boxes and so on).
+    nonisolated static func type(_ text: String, on device: CastDevice) async throws {
+        for scalar in text.unicodeScalars {
+            try await press("Lit_" + NetworkUtils.strictEncode(String(scalar)), on: device)
+        }
+    }
+
     private func request(_ path: String, method: String) async throws -> String {
         guard let url = URL(string: path, relativeTo: base) else { throw CastError.badResponse }
         var req = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 6)
