@@ -13,14 +13,35 @@ It works with:
 
 ## Features
 
+**Finding and casting videos**
 - **Video finder in the browser.** It watches `<video>` tags and the page's network requests (HLS `.m3u8`, DASH `.mpd`, MP4, WebM, MOV, MKV, audio). This includes videos inside embedded players.
-- **One-tap casting.** A "videos found" button shows up on any page with video. Tap a video, then pick a TV.
-- **Remote control.** A full remote, plus a mini "now casting" bar so you can keep browsing while a video plays.
-- **iPhone relay.** A small web server on the phone that passes video to the TV with the website's Referer, User-Agent, cookies and CORS headers. It also rewrites HLS playlists so every segment goes through it. This fixes most "the TV says it can't play this" problems. It's on automatically for HLS streams, and the remote has a **Try again through iPhone relay** button.
-- **Cast videos from your iPhone**, from Photos or the Files app (served with byte-range support, so seeking works).
+- **One-tap casting.** A "videos found" button shows up on any page with video. Tap a video to see its options, then cast.
+- **Quality picker** for HLS streams (4K, 1080p, 720p…), on the TV and on the phone.
+- **Subtitles.** It finds `.vtt`/`.srt` files on the page, or you can load your own from Files. They're sent as WebVTT to Chromecast (with an on/off toggle) and as SRT to Samsung, LG and other DLNA TVs.
+- **Hide short clips.** Videos under 30 seconds are usually ads, so they're tucked away.
+- **Auto-cast** (optional). The main video on a page goes to your TV by itself.
+- **Cast a link.** Paste any `.mp4` or `.m3u8` address.
+- **Cast videos from your iPhone**, from Photos, the Files app or downloads.
+- **Download videos** (direct video files) to watch or cast later.
+
+**While it plays**
+- **Remote control.** Play/pause, seek, ±10 s/30 s, volume and stop, plus a mini "now casting" bar while you keep browsing.
+- **Up Next queue** with "Play next", reordering, **repeat** (all or one), **shuffle**, and auto-advance.
+- **Resume where you left off**, with a "Start over" button, plus a **Recently cast** list and a "Continue watching" card on the start page.
+- **Playback speed** from 0.5× to 2× (Chromecast).
+- **Sleep timer.** 15–90 minutes, or the end of the video.
+- **Lock screen & Control Center controls** for the TV.
+- **Full Roku remote:** arrows, OK, Back, Home, rewind/fast-forward, instant replay, TV volume, and typing into search boxes.
 - **Move playback** to another TV mid-video.
-- **Ad and pop-up blocker**, bookmarks, history, desktop-site mode, a choice of search engine.
-- **Keeps working in the background** while the relay is in use.
+- **iPhone relay.** A small web server on the phone that passes video to the TV with the website's Referer, User-Agent, cookies and CORS headers. It also rewrites HLS playlists so every segment goes through it. This fixes most "the TV says it can't play this" problems. It's on automatically for HLS streams, and the remote has a **Try again through iPhone relay** button.
+
+**Browser**
+- **Tabs and private tabs**, with page previews.
+- **Find on page**, bookmarks, history, desktop-site mode, a choice of search engine.
+- **Browser identity switcher** (iPad, Mac, Android or Windows) for sites that only serve video to certain browsers.
+- **Ad and pop-up blocker.**
+- **Face ID lock** for the whole app.
+- **Links from other apps and Shortcuts:** `castpilot://open?url=…`, `castpilot://cast?url=…&title=…`, `castpilot://queue?url=…` (see Settings › Shortcuts & other apps).
 
 ## Two ways to get it on your iPhone
 
