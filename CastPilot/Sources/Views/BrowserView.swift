@@ -43,6 +43,10 @@ struct BrowserView: View {
                         .transition(.opacity)
                 }
                 VStack(spacing: 10) {
+                    if let blocked = app.browser.blockedBanner, !addressFocused {
+                        PopupBlockedBanner(blocked: blocked, browser: app.browser)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
                     if !app.browser.visibleMedia.isEmpty && !addressFocused {
                         FoundVideosButton(count: app.browser.visibleMedia.count) { app.sheet = .media }
                             .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -55,6 +59,7 @@ struct BrowserView: View {
                 .padding(.horizontal, 12)
                 .padding(.bottom, 10)
                 .animation(.spring(duration: 0.3), value: app.browser.visibleMedia.count)
+                .animation(.spring(duration: 0.3), value: app.browser.blockedBanner?.id)
                 .animation(.spring(duration: 0.3), value: app.session == nil)
             }
             if !addressFocused {
@@ -125,6 +130,9 @@ struct AddressBar: View {
                         }
                         .accessibilityLabel("Clear")
                     } else if !isFocused && browser.currentURL != nil {
+                        if browser.blockedCount > 0 {
+                            PopupShield(browser: browser)
+                        }
                         Button { browser.reloadOrStop() } label: {
                             Image(systemName: browser.isLoading ? "xmark" : "arrow.clockwise")
                                 .font(.footnote.weight(.semibold))
@@ -223,6 +231,12 @@ struct BottomToolbar: View {
                     }
                     ShareLink(item: url) { Label("Share page", systemImage: "square.and.arrow.up") }
                     Button { browser.showFindOnPage() } label: { Label("Find on page", systemImage: "doc.text.magnifyingglass") }
+                    if app.settings.blockPopups {
+                        Button { browser.setPopupsAllowedHere(!browser.popupsAllowedHere) } label: {
+                            Label(browser.popupsAllowedHere ? "Block pop-ups on this site" : "Allow pop-ups on this site",
+                                  systemImage: browser.popupsAllowedHere ? "shield" : "shield.slash")
+                        }
+                    }
                 }
                 Button { app.sheet = .library } label: { Label("Bookmarks, history & recently cast", systemImage: "book") }
                 Button { app.sheet = .castLink } label: { Label("Cast a link", systemImage: "link") }
@@ -416,5 +430,66 @@ struct StartPageView: View {
         let palette: [Color] = [.blue, .indigo, .purple, .pink, .orange, .teal, .green, .red]
         let sum = title.unicodeScalars.reduce(0) { $0 + Int($1.value) }
         return palette[sum % palette.count]
+    }
+}
+
+/// "Blocked a pop-up from …" with a way to open it anyway. Hides itself after a few seconds.
+struct PopupBlockedBanner: View {
+    let blocked: BlockedPopup
+    let browser: BrowserModel
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "shield.lefthalf.filled")
+                .foregroundStyle(Color.accentColor)
+            Text(blocked.message)
+                .font(.subheadline)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+            Spacer(minLength: 0)
+            if blocked.url != nil {
+                Button("Open") { browser.openBlocked(blocked) }
+                    .font(.subheadline.weight(.semibold))
+            }
+            Button { browser.dismissBlockedBanner(blocked.id) } label: {
+                Image(systemName: "xmark").font(.caption.weight(.bold))
+            }
+            .accessibilityLabel("Dismiss")
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(.regularMaterial, in: Capsule())
+        .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
+        .task(id: blocked.id) {
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            browser.dismissBlockedBanner(blocked.id)
+        }
+    }
+}
+
+/// Address-bar shield showing how many pop-ups this page tried, with per-site controls.
+struct PopupShield: View {
+    let browser: BrowserModel
+
+    var body: some View {
+        Menu {
+            Text("\(browser.blockedCount) pop-up\(browser.blockedCount == 1 ? "" : "s") and redirect\(browser.blockedCount == 1 ? "" : "s") blocked on this page")
+            if let last = browser.lastBlocked, last.url != nil {
+                Button { browser.openBlocked(last) } label: {
+                    Label("Open the last one (\(last.siteName))", systemImage: "arrow.up.forward.square")
+                }
+            }
+            Button { browser.setPopupsAllowedHere(true) } label: {
+                Label("Allow pop-ups on this site", systemImage: "shield.slash")
+            }
+        } label: {
+            HStack(spacing: 2) {
+                Image(systemName: "shield.lefthalf.filled")
+                Text("\(browser.blockedCount)").font(.caption2.weight(.bold)).monospacedDigit()
+            }
+            .font(.footnote)
+            .foregroundStyle(Color.accentColor)
+        }
+        .accessibilityLabel("\(browser.blockedCount) pop-ups blocked")
     }
 }

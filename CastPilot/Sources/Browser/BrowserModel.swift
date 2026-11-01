@@ -24,10 +24,21 @@ final class BrowserModel: Identifiable {
     /// Changes on every page load; used so auto-cast fires at most once per page.
     private(set) var pageToken = UUID()
     var snapshot: UIImage?
+    /// Pop-ups and redirects stopped on the current page.
+    private(set) var blockedCount = 0
+    /// The latest one, shown as a banner until it's dismissed.
+    private(set) var blockedBanner: BlockedPopup?
+    /// The latest one, kept for the address-bar shield menu.
+    private(set) var lastBlocked: BlockedPopup?
 
     let settings: AppSettings
     private let library: Library
     @ObservationIgnored var onMediaDetected: ((MediaItem) -> Void)?
+    /// Opens a link in a new tab (set by the tab manager).
+    @ObservationIgnored var onOpenInNewTab: ((URL) -> Void)?
+    /// True once a page has finished loading and nothing new is loading; a sudden jump to
+    /// another site in this state is a script redirect, not something the user asked for.
+    @ObservationIgnored fileprivate var pageIsIdle = false
     @ObservationIgnored private var coordinator: WebCoordinator?
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
     @ObservationIgnored private var cachedUserAgent: String?
@@ -103,14 +114,70 @@ final class BrowserModel: Identifiable {
     }
 
     func load(_ url: URL) {
+        pageIsIdle = false
         webView.load(URLRequest(url: url))
     }
 
-    func goBack() { webView.goBack() }
-    func goForward() { webView.goForward() }
+    func goBack() { pageIsIdle = false; webView.goBack() }
+    func goForward() { pageIsIdle = false; webView.goForward() }
 
     func reloadOrStop() {
-        if webView.isLoading { webView.stopLoading() } else { webView.reload() }
+        if webView.isLoading { webView.stopLoading() } else { pageIsIdle = false; webView.reload() }
+    }
+
+    // MARK: Pop-up blocking
+
+    var popupsAllowedHere: Bool { settings.popupsAllowed(on: currentURL) }
+
+    func setPopupsAllowedHere(_ allowed: Bool) {
+        settings.setPopupsAllowed(allowed, on: currentURL)
+    }
+
+    /// Opens the most recently blocked pop-up or redirect after all.
+    func openBlocked(_ blocked: BlockedPopup) {
+        blockedBanner = nil
+        guard let url = blocked.url else { return }
+        switch blocked.kind {
+        case .popup: onOpenInNewTab?(url)
+        case .redirect: load(url)
+        }
+    }
+
+    func dismissBlockedBanner(_ id: UUID? = nil) {
+        if id == nil || blockedBanner?.id == id { blockedBanner = nil }
+    }
+
+    fileprivate func recordBlocked(_ url: URL?, kind: BlockedPopup.Kind) {
+        let blocked = BlockedPopup(url: url, kind: kind)
+        blockedCount += 1
+        lastBlocked = blocked
+        blockedBanner = blocked
+    }
+
+    /// Decides what happens when the page asks to open a new window.
+    fileprivate func handleNewWindow(_ action: WKNavigationAction) {
+        let url = action.request.url
+        let isWeb = url.map { $0.scheme == "http" || $0.scheme == "https" } ?? false
+        if !settings.blockPopups || popupsAllowedHere {
+            if let url, isWeb { onOpenInNewTab?(url) }
+            return
+        }
+        // A link the user tapped that stays on the same website (e.g. "open in new tab") is fine.
+        if action.navigationType == .linkActivated, isWeb, SiteKey.sameSite(url, currentURL), let url {
+            onOpenInNewTab?(url)
+            return
+        }
+        recordBlocked(isWeb ? url : nil, kind: .popup)
+    }
+
+    /// True when a main-frame navigation is a script quietly sending the page to another site.
+    fileprivate func shouldBlockRedirect(_ action: WKNavigationAction) -> Bool {
+        guard settings.blockPopups, !popupsAllowedHere, pageIsIdle,
+              action.navigationType == .other,
+              let url = action.request.url, url.scheme == "http" || url.scheme == "https",
+              currentURL != nil, !SiteKey.sameSite(url, currentURL) else { return false }
+        recordBlocked(url, kind: .redirect)
+        return true
     }
 
     func goHome() {
@@ -216,12 +283,21 @@ final class BrowserModel: Identifiable {
     }
 
     fileprivate func didStartMainFrameNavigation() {
+        pageIsIdle = false
         detectedMedia = []
         detectedSubtitles = []
         pageToken = UUID()
+        blockedCount = 0
+        blockedBanner = nil
+        lastBlocked = nil
+    }
+
+    fileprivate func didFailNavigation() {
+        pageIsIdle = true
     }
 
     fileprivate func didFinishNavigation() {
+        pageIsIdle = true
         syncState()
         if let url = currentURL, !isPrivate { library.recordVisit(title: pageTitle, url: url) }
     }
@@ -266,7 +342,6 @@ final class BrowserModel: Identifiable {
         onMediaDetected?(item)
     }
 
-    fileprivate var blocksPopups: Bool { settings.blockPopups }
     fileprivate var desktopMode: Bool { settings.effectiveDesktopMode }
 }
 
@@ -288,6 +363,9 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScri
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
                  preferences: WKWebpagePreferences) async -> (WKNavigationActionPolicy, WKWebpagePreferences) {
         preferences.preferredContentMode = (owner?.desktopMode ?? false) ? .desktop : .mobile
+        if navigationAction.targetFrame?.isMainFrame == true, owner?.shouldBlockRedirect(navigationAction) == true {
+            return (.cancel, preferences)
+        }
         if let scheme = navigationAction.request.url?.scheme?.lowercased(),
            !["http", "https", "about", "blob", "data", "file", "javascript"].contains(scheme) {
             // App-store and other app links are a common pop-up ad trick.
@@ -304,15 +382,19 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScri
         owner?.didFinishNavigation()
     }
 
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        owner?.didFailNavigation()
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        owner?.didFailNavigation()
+    }
+
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
                  for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        // Open "new window" links in the same tab. With pop-up blocking on, only links the
-        // user actually tapped are followed; script-opened windows are dropped.
+        // Never let a page open real extra windows. Wanted ones open as a new tab; the rest are blocked.
         if navigationAction.targetFrame == nil {
-            let userTapped = navigationAction.navigationType == .linkActivated
-            if userTapped || !(owner?.blocksPopups ?? true) {
-                webView.load(navigationAction.request)
-            }
+            owner?.handleNewWindow(navigationAction)
         }
         return nil
     }

@@ -93,6 +93,22 @@ final class AppSettings {
     var autoAdvanceQueue: Bool { didSet { defaults.set(autoAdvanceQueue, forKey: "autoAdvanceQueue") } }
     var lockScreenControls: Bool { didSet { defaults.set(lockScreenControls, forKey: "lockScreenControls") } }
     var requireFaceID: Bool { didSet { defaults.set(requireFaceID, forKey: "requireFaceID") } }
+    /// Sites (e.g. "example.com") the user lets open pop-ups and redirect.
+    var popupAllowedSites: [String] { didSet { defaults.set(popupAllowedSites, forKey: "popupAllowedSites") } }
+
+    func popupsAllowed(on url: URL?) -> Bool {
+        guard let site = SiteKey.site(for: url) else { return false }
+        return popupAllowedSites.contains(site)
+    }
+
+    func setPopupsAllowed(_ allowed: Bool, on url: URL?) {
+        guard let site = SiteKey.site(for: url) else { return }
+        if allowed {
+            if !popupAllowedSites.contains(site) { popupAllowedSites.append(site) }
+        } else {
+            popupAllowedSites.removeAll { $0 == site }
+        }
+    }
 
     /// Videos shorter than this are treated as ads when "hide short clips" is on.
     let shortClipSeconds: Double = 30
@@ -117,5 +133,6 @@ final class AppSettings {
         autoAdvanceQueue = d.object(forKey: "autoAdvanceQueue") as? Bool ?? true
         lockScreenControls = d.object(forKey: "lockScreenControls") as? Bool ?? true
         requireFaceID = d.object(forKey: "requireFaceID") as? Bool ?? false
+        popupAllowedSites = d.stringArray(forKey: "popupAllowedSites") ?? []
     }
 }

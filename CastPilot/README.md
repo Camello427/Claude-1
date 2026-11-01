@@ -39,7 +39,8 @@ It works with:
 - **Tabs and private tabs**, with page previews.
 - **Find on page**, bookmarks, history, desktop-site mode, a choice of search engine.
 - **Browser identity switcher** (iPad, Mac, Android or Windows) for sites that only serve video to certain browsers.
-- **Ad and pop-up blocker.**
+- **Pop-up and redirect blocker.** It stops pop-up windows and pop-unders, and stops pages from suddenly sending you to an ad site. A banner shows what was blocked, with an **Open** button; an address-bar shield counts blocks per page; and you can allow pop-ups on sites you trust.
+- **Ad blocker** with a built-in list of ad and pop-under networks.
 - **Face ID lock** for the whole app.
 - **Links from other apps and Shortcuts:** `castpilot://open?url=…`, `castpilot://cast?url=…&title=…`, `castpilot://queue?url=…` (see Settings › Shortcuts & other apps).
 

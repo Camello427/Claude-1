@@ -2,7 +2,7 @@ import WebKit
 
 /// A small built-in blocker for the worst ad and pop-up networks found on video sites.
 enum AdBlocker {
-    static let identifier = "CastPilotAdBlock-v1"
+    static let identifier = "CastPilotAdBlock-v2"
 
     static let blockedDomains = [
         "doubleclick.net", "googlesyndication.com", "googleadservices.com", "adservice.google.com",
@@ -14,6 +14,11 @@ enum AdBlocker {
         "galaksion.com", "zeropark.com", "monetag.com", "highperformanceformat.com", "profitableratecpm.com",
         "yllix.com", "bidvertiser.com", "plugrush.com", "adskeeper.com", "smartadserver.com",
         "rubiconproject.com", "pubmatic.com", "openx.net", "moatads.com", "scorecardresearch.com",
+        // Pop-under and redirect networks common on free streaming sites.
+        "magsrv.com", "realsrv.com", "tsyndicate.com", "clickaine.com", "adspyglass.com", "popmyads.com",
+        "pushame.com", "pushnest.com", "notix.io", "evadav.com", "rollerads.com", "kadam.net",
+        "adxpremium.com", "dtscout.com", "dtscdn.com", "clksite.com", "adcash.com", "aclib.net",
+        "acscdn.com", "adsco.re", "popunder.net", "ero-advertising.com", "trafficforce.com",
     ]
 
     static var rulesJSON: String {

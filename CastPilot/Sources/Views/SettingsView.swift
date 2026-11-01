@@ -18,7 +18,14 @@ struct SettingsView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     Toggle("Block ads", isOn: $settings.adBlockEnabled)
-                    Toggle("Block pop-ups", isOn: $settings.blockPopups)
+                    Toggle("Block pop-ups and redirects", isOn: $settings.blockPopups)
+                    if settings.blockPopups {
+                        NavigationLink {
+                            PopupSitesView()
+                        } label: {
+                            LabeledContent("Sites allowed to open pop-ups", value: "\(settings.popupAllowedSites.count)")
+                        }
+                    }
                     Toggle("Request desktop websites", isOn: $settings.desktopMode)
                     Picker("Browse as", selection: $settings.browserIdentity) {
                         ForEach(BrowserIdentity.allCases) { Text($0.name).tag($0) }
@@ -134,5 +141,29 @@ struct ShortcutsHelpView: View {
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
         }
+    }
+}
+
+/// Sites the user trusts to open pop-ups and redirect.
+struct PopupSitesView: View {
+    @Environment(AppState.self) private var app
+
+    var body: some View {
+        List {
+            Section {
+                if app.settings.popupAllowedSites.isEmpty {
+                    Text("None yet. To allow a site, open it and tap ••• › Allow pop-ups on this site.")
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(app.settings.popupAllowedSites, id: \.self) { site in
+                    Text(site)
+                }
+                .onDelete { app.settings.popupAllowedSites.remove(atOffsets: $0) }
+            } footer: {
+                Text("On every other site, CastPilot blocks pop-up windows and stops pages from suddenly sending you to another website. Links you tap still work.")
+            }
+        }
+        .navigationTitle("Allowed sites")
+        .toolbar { EditButton() }
     }
 }

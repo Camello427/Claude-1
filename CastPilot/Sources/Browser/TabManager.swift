@@ -67,5 +67,8 @@ final class TabManager {
             guard let self, let tab else { return }
             self.onMediaDetected?(tab, item)
         }
+        tab.onOpenInNewTab = { [weak self, weak tab] url in
+            self?.newTab(url: url, isPrivate: tab?.isPrivate ?? false)
+        }
     }
 }
